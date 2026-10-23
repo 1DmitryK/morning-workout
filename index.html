@@ -6,34 +6,15 @@
       <div><div class="eyebrow">Моя зарядка</div><h2>Движение каждый день</h2></div>
       
     </div>
-    <p class="intro">Выбери упражнение. «Старт» запускает показ движения и общий таймер занятия.</p>
+    <p class="intro">12 упражнений из памятки NHS и 3 твоих упражнения. Выбери название и нажми «Старт».</p>
     <section class="paper">
-      <div class="exercise-picker" data-value="exercise-picker" aria-label="Выберите упражнение"></div>
+      <label class="form-label">Упражнение<select class="form-control" data-value="exercise-picker" aria-label="Выберите упражнение"></select></label>
+      <div class="viz-row exercise-navigation"><button type="button" class="btn" data-action="previous">← Назад</button><span class="text-small" data-value="exercise-origin">NHS · 1 из 12</span><button type="button" class="btn" data-action="next">Далее →</button></div>
       <div class="movement-stage">
       <h3 data-value="exercise-name">Подъём на носки</h3>
       <svg data-value="movement" viewBox="0 0 360 260" role="img" aria-label="Нарисованная фигура показывает подъём пяток с опорой" style="width:100%;max-width:420px;display:block;margin:auto;color:var(--foreground)">
         <title data-value="movement-title">Подъём на носки</title>
-        <ellipse cx="175" cy="239" rx="118" ry="6" fill="var(--muted)"/>
-        <path d="M40 234H320" stroke="var(--border)" stroke-width="2"/>
-        <g data-part="standing-support" fill="none" stroke="var(--muted-foreground)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M239 234V111Q239 105 245 105H282V234M239 164H282"/>
-        </g>
-        <g data-part="sitting-support" fill="none" stroke="var(--muted-foreground)" stroke-width="5" stroke-linecap="round" style="display:none">
-          <path d="M65 107V166H145M77 166V234M135 166V234"/>
-        </g>
-        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path data-part="back-leg" stroke="var(--viz-series-1)" stroke-width="11" opacity=".35"/>
-          <path data-part="back-foot" stroke="var(--viz-series-1)" stroke-width="10" opacity=".35"/>
-          <path data-part="far-arm" stroke="var(--foreground)" stroke-width="9" opacity=".3"/>
-          <path data-part="torso" stroke="var(--viz-series-1)" stroke-width="28"/>
-          <path data-part="front-leg" stroke="var(--foreground)" stroke-width="12"/>
-          <path data-part="front-foot" stroke="var(--viz-series-1)" stroke-width="11"/>
-          <path data-part="arm" stroke="var(--foreground)" stroke-width="10"/>
-          <path data-part="neck" stroke="var(--foreground)" stroke-width="10"/>
-        </g>
-        <circle data-part="head" r="18" fill="var(--foreground)"/>
-        <circle data-part="eye" r="2" fill="var(--background)"/>
-        <circle data-part="ankle" r="5" fill="var(--viz-series-1)"/>
+        <g data-value="movement-art"></g>
       </svg>
       <div class="text-center" data-value="movement-phase">Пятки опущены</div>
       <div class="text-small text-center" data-value="movement-detail">Две стопы на полу · показ с опорой</div>
@@ -50,7 +31,7 @@
       <div class="text-small text-center" data-value="timer-status" role="status">Можно начинать</div></div>
     </section>
     <section class="paper diary">
-    <h3>Дневник тренировок</h3>
+    <h3>Дневник · выбранное упражнение</h3>
     <div class="days" data-value="days" aria-label="Дни недели"></div>
     <div data-value="date" class="text-small"></div>
     <div data-value="progress" role="status" style="margin:12px 0"></div>
@@ -70,11 +51,11 @@
     <details><summary>Как пользоваться и добавить на экран «Домой»</summary>
       <p>Выбери упражнение и нажми «Старт». «Пауза» останавливает показ и таймер. Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
       <p>В Safari: «Поделиться» → «На экран Домой» → «Открывать как веб-приложение», если переключатель показан → «Добавить».</p>
-      <p>Повторения и темп анимации — настройки дневника и условный показ, а не назначенная нагрузка. Для новых упражнений на пресс количество повторений оставлено пустым. Выполняй упражнения из своей согласованной программы; при боли прекрати упражнение.</p>
-      <p>Небольшое скручивание для пресса показано по памятке Royal Berkshire NHS. Оно не является индивидуальным назначением.</p>
+      <p>Повторения и темп анимации — настройки дневника и условный показ, а не назначенная нагрузка. Для упражнений NHS повторения и секунды оставлены пустыми. Выполняй упражнения из своей согласованной программы; при боли прекрати упражнение.</p>
+      <p>Все 12 базовых упражнений NHS доступны в списке. Это библиотека демонстраций, а не назначение выполнять весь комплекс. Выбирай упражнения, согласованные с физиотерапевтом.</p>
     </details></section>
     <p class="footnote">Данные дневника хранятся на этом устройстве. Между телефоном и планшетом они не синхронизируются. После первой загрузки приложение доступно без интернета.</p>
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js"></script><script src="./app.js"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js"></script><script src="./poses.js"></script><script src="./app.js"></script></body></html>
