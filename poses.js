@@ -86,7 +86,7 @@ window.WORKOUT_POSES=(()=>{
   return svg;
  }
  function squat(rise){
-  const hip=[278-53*rise,147+39*rise],sh=[278,94+39*rise],knee=[264-66*rise,189+5*rise];
+  const hip=[278,147+39*rise],sh=[278,94+39*rise],knee=[264-44*rise,189+5*rise];
   let svg=ground()+wall(295);
   svg+=line([[hip[0]+5,hip[1]+2],[knee[0]+8,knee[1]+3],[237,222]],ink,10,.35)+foot([237,222],[209,232],blue,.35);
   svg+=body([sh,hip])+line([hip,knee,[229,221]])+foot([229,221],[201,232]);
