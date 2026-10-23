@@ -1,6 +1,6 @@
 'use strict';
-const CACHE='workout-studio-v6';
-const ASSETS=['./','./index.html','./style.css?v=6','./exercises.js?v=6','./poses.js?v=6','./app.js?v=6','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
+const CACHE='workout-studio-v7';
+const ASSETS=['./','./index.html','./style.css?v=7','./exercises.js?v=7','./poses.js?v=7','./app.js?v=7','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('workout-studio-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
