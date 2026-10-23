@@ -1,12 +1,18 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=4"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=5"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
 <div id="morning-workout-animated">
   <section data-screen="workout">
     <div class="viz-row" style="justify-content:space-between">
       <div><div class="eyebrow">Моя зарядка</div><h2>Движение каждый день</h2></div>
       
     </div>
-    <p class="intro">12 упражнений из памятки NHS и 3 твоих упражнения. Выбери название и нажми «Старт».</p>
+    <p class="intro">25 упражнений с анимациями: твоя зарядка, памятка NHS и мягкий комплекс для контроля веса. Выбери название и нажми «Старт».</p>
+    <nav class="block-picker" aria-label="Блоки упражнений">
+      <button type="button" class="btn" data-action="group-personal">Моя зарядка <small>3 упражнения</small></button>
+      <button type="button" class="btn" data-action="group-nhs">Памятка NHS <small>12 упражнений</small></button>
+      <button type="button" class="btn" data-action="group-weight">Контроль веса <small>10 упражнений · без прыжков</small></button>
+    </nav>
+    <p class="weight-guidance text-small" data-value="weight-guidance" hidden>Мягкий старт: выбирай комфортные движения и увеличивай нагрузку постепенно. Не обязательно делать все 10 подряд. Контроль веса зависит также от питания и регулярной активности. При боли или плохом самочувствии остановись; при ограничениях согласуй упражнения с врачом. Для упражнений со стулом нужна устойчивая опора без колёс.</p>
     <section class="paper">
       <label class="form-label">Упражнение<select class="form-control" data-value="exercise-picker" aria-label="Выберите упражнение"></select></label>
       <div class="viz-row exercise-navigation"><button type="button" class="btn" data-action="previous">← Назад</button><span class="text-small" data-value="exercise-origin">NHS · 1 из 12</span><button type="button" class="btn" data-action="next">Далее →</button></div>
@@ -22,10 +28,11 @@
       <div class="guidance" data-value="exercise-description"></div>
       <a data-value="exercise-source" class="source-link" target="_blank" rel="noopener" hidden></a>
       <div class="timer-area"><div class="text-small text-center">Общий таймер занятия · не длительность одного подхода</div>
+      <label class="duration-label">Длительность, минут <input class="form-control" type="number" min="1" max="180" step="1" inputmode="numeric" value="5" data-value="duration" aria-label="Длительность в минутах"></label>
       <h1 class="tabular-nums text-center" data-value="timer" role="timer">05:00</h1>
       <div class="viz-row timer-controls">
         <button type="button" class="btn btn-primary" data-action="start">Старт</button>
-        <button type="button" class="btn" data-action="pause">Пауза</button>
+        <button type="button" class="btn" data-action="stop">Стоп</button>
         <button type="button" class="btn" data-action="reset">Сброс</button>
       </div>
       <div class="text-small text-center" data-value="timer-status" role="status">Можно начинать</div></div>
@@ -49,7 +56,7 @@
       <button type="button" class="btn" data-action="calendar">Добавить в календарь</button>
     </details>
     <details><summary>Как пользоваться и добавить на экран «Домой»</summary>
-      <p>Выбери упражнение и нажми «Старт». «Пауза» останавливает показ и таймер. Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
+      <p>Выбери упражнение и нажми «Старт». Укажи от 1 до 180 минут. Кнопка «Старт» превращается в «Паузу», затем в «Продолжить». «Стоп» завершает занятие, «Сброс» возвращает выбранную длительность. Чтобы изменить минуты во время занятия, сначала нажми «Сброс». Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
       <p>В Safari: «Поделиться» → «На экран Домой» → «Открывать как веб-приложение», если переключатель показан → «Добавить».</p>
       <p>Повторения и темп анимации — настройки дневника и условный показ, а не назначенная нагрузка. Для упражнений NHS повторения и секунды оставлены пустыми. Выполняй упражнения из своей согласованной программы; при боли прекрати упражнение.</p>
       <p>Все 12 базовых упражнений NHS доступны в списке. Это библиотека демонстраций, а не назначение выполнять весь комплекс. Выбирай упражнения, согласованные с физиотерапевтом.</p>
@@ -58,4 +65,4 @@
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=4"></script><script src="./poses.js?v=4"></script><script src="./app.js?v=4"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=5"></script><script src="./poses.js?v=5"></script><script src="./app.js?v=5"></script></body></html>

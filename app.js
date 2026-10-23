@@ -73,13 +73,46 @@
       });value('exercises').append(section);
     });save();
   }
-  let left=300,deadline=0,timer=null;
+  const validMinutes=n=>Number.isFinite(n)&&n>=1&&n<=180&&Number.isInteger(n);
+  let minutes=validMinutes(data.durationMinutes)?data.durationMinutes:5;
+  let left=minutes*60,deadline=0,timer=null,timerState='idle';
+  value('duration').value=String(minutes);
   function showTime(){value('timer').textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');}
   function stop(){if(timer!==null)clearInterval(timer);timer=null;}
-  function tick(){left=Math.max(0,Math.ceil((deadline-Date.now())/1000));showTime();if(!left){stop();value('timer-status').textContent='Пять минут завершены!';action('start').textContent='Ещё раз';}}
-  action('start').onclick=()=>{if(timer!==null)return;if(!left)left=300;deadline=Date.now()+left*1000;timer=setInterval(tick,250);tick();value('timer-status').textContent='Идёт общий таймер занятия';action('start').textContent='Старт';};
-  action('pause').onclick=()=>{if(timer===null)return;tick();stop();if(left){value('timer-status').textContent='На паузе';action('start').textContent='Продолжить';}};
-  action('reset').onclick=()=>{stop();left=300;animationSeconds=0;drawPose(0);showTime();value('timer-status').textContent='Можно начинать';action('start').textContent='Старт';};
+  function timerUI(state,message){
+    timerState=state;value('timer-status').textContent=message;
+    action('start').textContent=state==='running'?'Пауза':state==='paused'?'Продолжить':'Старт';
+    value('duration').disabled=state==='running'||state==='paused';
+    action('stop').disabled=state!=='running'&&state!=='paused';
+  }
+  function tick(){
+    left=Math.max(0,Math.ceil((deadline-Date.now())/1000));showTime();
+    if(!left){stop();timerUI('finished','Занятие завершено!');}
+  }
+  function resetTimer(){stop();left=minutes*60;animationSeconds=0;drawPose(0);showTime();timerUI('idle','Можно начинать');}
+  value('duration').onchange=()=>{
+    if(timerState==='running'||timerState==='paused'){value('duration').value=String(minutes);return;}
+    const candidate=Number(value('duration').value);
+    if(!validMinutes(candidate)){value('duration').value=String(minutes);value('timer-status').textContent='Выбери целое число от 1 до 180 минут.';return;}
+    minutes=candidate;data.durationMinutes=minutes;save();resetTimer();
+  };
+  action('start').onclick=()=>{
+    if(timerState==='running'){
+      tick();stop();if(left)timerUI('paused','На паузе · время сохранено');return;
+    }
+    // Commit a newly typed duration even if Start is clicked before the field loses focus.
+    if(timerState!=='paused'){
+      value('duration').onchange();
+      const candidate=Number(value('duration').value);
+      if(!validMinutes(candidate))return;
+      left=minutes*60;animationSeconds=0;drawPose(0);
+    }
+    deadline=Date.now()+left*1000;lastFrame=0;
+    timer=setInterval(tick,250);timerUI('running','Идёт общий таймер занятия');tick();
+  };
+  action('stop').onclick=()=>{stop();left=0;showTime();timerUI('stopped','Занятие остановлено · «Старт» начнёт заново');};
+  action('reset').onclick=resetTimer;
+  timerUI('idle','Можно начинать');
   if(!/^\d{2}:\d{2}$/.test(data.reminder))data.reminder='08:00';
   value('reminder-time').value=data.reminder;
   function reminderLabel(){action('reminder').textContent=data.enabled?'Выключить':'Включить';value('reminder-status').textContent=data.enabled?'На '+data.reminder+' — пока зарядка открыта. При закрытом чате уведомлений нет.':'Выключено';}
@@ -104,21 +137,24 @@
     value('exercise-name').textContent=exercise.name;value('movement-title').textContent=exercise.name;
     value('exercise-description').textContent=exercise.description;
     const source=exercise.source;value('exercise-source').hidden=!source;
-    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':'Моя зарядка';
+    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':exercise.group==='weight'?'Контроль веса · '+exercise.sourceNumber+' из 10':'Моя зарядка';
+    for(const group of ['personal','nhs','weight'])action('group-'+group).setAttribute('aria-pressed',String(exercise.group===group));
+    value('weight-guidance').hidden=exercise.group!=='weight';
     if(source){value('exercise-source').textContent=source.label;value('exercise-source').href=source.url;}
     value('movement').setAttribute('aria-label',exercise.name+': '+exercise.description);
     const supine=['pelvic','bridge','crunch','rotation','sideleg'].includes(exercise.pose);
     value('movement').setAttribute('viewBox',supine?'20 90 320 155':'0 15 360 235');
     drawPose(exercise.pose==='balance'?2:0);render();
   }
-  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup')};
-  groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';
+  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup')};
+  groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
+  for(const group of ['personal','nhs','weight'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
   exercises.forEach((exercise,index)=>{
     const option=document.createElement('option');option.value=String(index);
     option.textContent=(exercise.sourceNumber?exercise.sourceNumber+'. ':'')+exercise.name;
     groups[exercise.group].append(option);
   });
-  value('exercise-picker').append(groups.personal,groups.nhs);
+  value('exercise-picker').append(groups.personal,groups.nhs,groups.weight);
   value('exercise-picker').onchange=()=>selectExercise(Number(value('exercise-picker').value));
   action('previous').onclick=()=>selectExercise((activeExercise+exercises.length-1)%exercises.length);
   action('next').onclick=()=>selectExercise((activeExercise+1)%exercises.length);
@@ -137,7 +173,7 @@
     if(when.getTime()<Date.now())when.setDate(when.getDate()+1);
     const pad=n=>String(n).padStart(2,'0'),stamp=when.getFullYear()+pad(when.getMonth()+1)+pad(when.getDate())+'T'+pad(when.getHours())+pad(when.getMinutes())+'00';
     const page=new URL('./',location.href).href;
-    const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Workout Studio//RU','BEGIN:VEVENT','UID:workout-'+Date.now()+'@workout.local','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),'DTSTART:'+stamp,'DURATION:PT5M','RRULE:FREQ=DAILY','SUMMARY:Моя зарядка','URL:'+page,'BEGIN:VALARM','TRIGGER:PT0S','ACTION:DISPLAY','DESCRIPTION:Время зарядки','END:VALARM','END:VEVENT','END:VCALENDAR',''].join('\r\n');
+    const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Workout Studio//RU','BEGIN:VEVENT','UID:workout-'+Date.now()+'@workout.local','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),'DTSTART:'+stamp,'DURATION:PT'+minutes+'M','RRULE:FREQ=DAILY','SUMMARY:Моя зарядка','URL:'+page,'BEGIN:VALARM','TRIGGER:PT0S','ACTION:DISPLAY','DESCRIPTION:Время зарядки','END:VALARM','END:VEVENT','END:VCALENDAR',''].join('\r\n');
     try{
       const file=new File([ics],'workout-reminder.ics',{type:'text/calendar'});
       if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Ежедневная зарядка'});}

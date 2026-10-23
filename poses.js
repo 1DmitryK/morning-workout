@@ -130,7 +130,88 @@ window.WORKOUT_POSES=(()=>{
   svg+=line([sh,[108,133-h]],ink,10)+head(headP,2.8);
   return svg;
  }
+ // Gentle block: original front/side views with continuous, alternating movement.
+ function easyFrame(kind,seconds){
+  const w=wave(seconds,4),r=w.rise;
+  const alternating=Math.sin(seconds*Math.PI/2),l=Math.max(0,alternating),q=Math.max(0,-alternating);
+  let svg=ground(),message='Плавное движение',detail='Комфортная амплитуда · без прыжков';
+  if(kind==='sitstand'){
+   const sh=[96+77*r,96-3*r],hip=[103+72*r,153-8*r];
+   svg+=chair()+line([hip,[151+14*r,164+21*r],[175,225]],ink,11)+foot([175,225],[199,232]);
+   svg+=line([[hip[0]-5,hip[1]+3],[144+13*r,168+21*r],[165,225]],ink,10,.35)+foot([165,225],[188,232],blue,.35);
+   svg+=body([sh,hip])+line([sh,[sh[0],sh[1]-15]],ink,9)+head([sh[0],sh[1]-32]);
+   svg+=line([sh,[sh[0]+20,sh[1]+28],[sh[0]+45,sh[1]+30]],ink,9);
+   message=r<.1?'Сидя':r>.9?'Стоя':w.cycle<.5?'Встать со стула':'Плавно сесть';detail='Устойчивый стул · стопы на полу';
+  }else if(kind==='seatmarch'||kind==='curls'){
+   const sh=[102,96],hip=[108,153];
+   svg+=chair()+body([sh,hip])+line([sh,[100,81]],ink,9)+head([100,64]);
+   for(const [i,lift,opacity] of [[0,kind==='seatmarch'?l:0,.4],[1,kind==='seatmarch'?q:0,1]]){
+    const x=i*12,knee=[157+x,164-28*lift],ankle=[157+x,225-32*lift];
+    svg+=line([hip,knee,ankle],ink,10,opacity)+foot(ankle,[181+x,232-32*lift],blue,opacity);
+   }
+   if(kind==='curls'){
+    for(const [x,o] of [[-9,.35],[5,1]]){
+     const elbow=[108+x,131],hand=[117+x+27*Math.sin(Math.PI*r),163-65*r];
+     svg+=line([[sh[0]+x,sh[1]],elbow,hand],ink,9,o)+circle(hand,5,blue,o);
+    }
+    message=r<.15?'Руки опущены':r>.85?'Руки согнуты':w.cycle<.5?'Согнуть руки':'Плавно опустить';detail='Локти у корпуса · сидя, без веса или с лёгким весом';
+   }else{
+    svg+=line([sh,[117,127],[126,156]],ink,9);
+    message=alternating>.15?'Поднять одну ногу':alternating<-.15?'Поднять другую ногу':'Стопы на полу';detail='Держись за края стула · спина прямая';
+   }
+  }else if(kind==='standback'||kind==='minisquat'){
+   const squat=kind==='minisquat'?r:0,sh=[156-9*squat,94+24*squat],hip=[153-23*squat,150+24*squat];
+   svg+=support()+body([sh,hip])+line([sh,[sh[0],sh[1]-15]],ink,9)+head([sh[0],sh[1]-32]);
+   svg+=line([sh,[197,122],[245,112]],ink,9);
+   for(const [lift,o] of [[kind==='standback'?l:0,.4],[kind==='standback'?q:0,1]]){
+    const ankle=[155-65*lift,224-26*lift],knee=[154+14*squat-33*lift,188+7*squat-13*lift];
+    svg+=line([hip,knee,ankle],ink,11,o)+foot(ankle,[ankle[0]+25,ankle[1]+8],blue,o);
+   }
+   message=kind==='minisquat'?(r>.85?'Небольшое приседание':r<.15?'Стоя':w.cycle<.5?'Немного согнуть колени':'Выпрямиться'):(alternating>.15?'Одна нога назад':alternating<-.15?'Другая нога назад':'Обе стопы на полу');
+   detail='Руки на устойчивой опоре · спина прямая';
+  }else{
+   let shift=0,leftX=156,rightX=202,leftY=224,rightY=224;
+   const side=kind==='sidesteps';
+   if(side){
+    // Travel right, bring trailing foot in, then travel back. No crossed legs.
+    const c=(seconds%8)/8;
+    const smooth=x=>(1-Math.cos(Math.PI*x))/2;
+    if(c<.25){rightX+=55*smooth(c*4);}else if(c<.5){rightX+=55;leftX+=55*smooth((c-.25)*4);}else if(c<.75){rightX+=55;leftX+=55*(1-smooth((c-.5)*4));}else rightX+=55*(1-smooth((c-.75)*4));
+    shift=(leftX+rightX)/2-179;message=c<.5?'Шаг и приставить вправо':'Шаг и приставить влево';detail='Шаги небольшие · ноги не скрещиваются';
+   }
+   const sh=[179+shift,94],hip=[179+shift,151];
+   svg+=body([sh,hip])+line([sh,[179+shift,79]],ink,9)+head([179+shift,61],-Math.PI/2);
+   if(kind==='standside'){svg+=support();rightX+=58*q;leftX-=58*l;leftY-=13*l;rightY-=13*q;}
+   const height=kind==='kneelifts'?46:kind==='march'?20:0;
+   if(height){leftY-=height*l;rightY-=height*q;}
+   for(const [i,x,y,lift] of [[0,leftX,leftY,l],[1,rightX,rightY,q]]){
+    let knee=[x,188-height*.9*lift],ankle=[x,y];
+    if(kind==='heeldigs'){knee=[x+(i?14:-14)*lift,189];ankle=[x+(i?31:-31)*lift,226-3*lift];}
+    if(kind==='standside')knee=[(hip[0]+x)/2,188-6*lift];
+    svg+=line([hip,knee,ankle],ink,11,i?1:.65);
+    const toe=kind==='heeldigs'?[ankle[0]+(i?18:-18),ankle[1]+7-24*lift]:[ankle[0]+(i?18:-18),ankle[1]+8];
+    svg+=line([ankle,toe],blue,10,i?1:.65);
+   }
+   if(kind==='standside')svg+=line([sh,[216,122],[245,112]],ink,9)+line([sh,[144,125],[141,150]],ink,9);
+   else if(kind==='kneelifts')svg+=line([sh,[138,123],[197-40*l,162-37*l]],ink,9)+line([sh,[220,123],[161+40*q,162-37*q]],ink,9);
+   else svg+=line([sh,[137,124],[133+15*l,154-25*l]],ink,9)+line([sh,[221,124],[225-15*q,154-25*q]],ink,9);
+   if(!side)message=kind==='heeldigs'?(alternating>.15?'Одна пятка впереди':alternating<-.15?'Другая пятка впереди':'Стопы рядом'):alternating>.15?'Одна нога':alternating<-.15?'Другая нога':'Обе стопы на полу';
+   if(kind==='standside')detail='Рука на опоре · корпус не наклоняется';
+   if(kind==='heeldigs')detail='Пятка впереди · носок вверх';
+  }
+  return{svg,phase:message,detail};
+ }
  const all={
+  march:s=>easyFrame('march',s),
+  heeldigs:s=>easyFrame('heeldigs',s),
+  kneelifts:s=>easyFrame('kneelifts',s),
+  sidesteps:s=>easyFrame('sidesteps',s),
+  sitstand:s=>easyFrame('sitstand',s),
+  minisquat:s=>easyFrame('minisquat',s),
+  standside:s=>easyFrame('standside',s),
+  standback:s=>easyFrame('standback',s),
+  curls:s=>easyFrame('curls',s),
+  seatmarch:s=>easyFrame('seatmarch',s),
   heels:s=>{const w=wave(s);return{svg:standing(w.rise,false,w.cycle),phase:phase(w.rise,w.cycle),detail:'Две стопы · рука на опоре'}},
   balance:s=>{const w=wave(s);return{svg:standing(w.rise,true,w.cycle),phase:held(w.cycle)>.97?'Удержание':phase(held(w.cycle),w.cycle),detail:'Одна нога · рука на опоре'}},
   ankles:s=>{const w=wave(s);return{svg:seated(w.rise,'ankles'),phase:w.rise<.2?'На себя':w.rise>.8?'От себя':w.cycle<.5?'От себя':'На себя',detail:'Движение стоп'}},
