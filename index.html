@@ -1,17 +1,19 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=7"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=8"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
 <div id="morning-workout-animated">
   <section data-screen="workout">
     <div class="viz-row" style="justify-content:space-between">
       <div><div class="eyebrow">Моя зарядка</div><h2>Движение каждый день</h2></div>
       
     </div>
-    <p class="intro">25 упражнений с анимациями: твоя зарядка, памятка NHS и мягкий комплекс для контроля веса. Выбери название и нажми «Старт».</p>
+    <p class="intro">35 упражнений с анимациями: твоя зарядка, памятка NHS и мягкий комплекс для контроля веса и кардио сидя. Выбери название и нажми «Старт».</p>
     <nav class="block-picker" aria-label="Блоки упражнений">
       <button type="button" class="btn" data-action="group-personal">Моя зарядка <small>3 упражнения</small></button>
       <button type="button" class="btn" data-action="group-nhs">Памятка NHS <small>12 упражнений</small></button>
       <button type="button" class="btn" data-action="group-weight">Контроль веса <small>10 упражнений · без прыжков</small></button>
+      <button type="button" class="btn" data-action="group-cardio">Кардио сидя <small>10 упражнений · для выносливости</small></button>
     </nav>
+    <p class="weight-guidance text-small" data-value="cardio-guidance" hidden>Выбирай подходящие движения, не обязательно все подряд. Устойчивый стул, стопы достают до пола. Начни с лёгкой разминки; заверши постепенным замедлением. Дыши свободно, сохраняй возможность говорить. Делай паузы по самочувствию. При головокружении, боли в груди или необычной одышке остановись. При нарушении равновесия согласуй новые движения с физиотерапевтом. Это варианты для выбора, а не индивидуальная программа. Темп рисунка условный; в дневнике отмечаются секунды движения.</p>
     <p class="weight-guidance text-small" data-value="weight-guidance" hidden>Мягкий старт: выбирай комфортные движения и увеличивай нагрузку постепенно. Не обязательно делать все 10 подряд. Контроль веса зависит также от питания и регулярной активности. При боли или плохом самочувствии остановись; при ограничениях согласуй упражнения с врачом. Для упражнений со стулом нужна устойчивая опора без колёс.</p>
     <section class="paper">
       <label class="form-label">Упражнение<select class="form-control" data-value="exercise-picker" aria-label="Выберите упражнение"></select></label>
@@ -65,4 +67,4 @@
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=7"></script><script src="./poses.js?v=7"></script><script src="./app.js?v=7"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=8"></script><script src="./poses.js?v=8"></script><script src="./app.js?v=8"></script></body></html>

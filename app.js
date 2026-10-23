@@ -58,11 +58,11 @@
       const heading=document.createElement('h3');heading.textContent=names[i];section.append(heading);
       exercise.forEach((set,j)=>{
         const row=document.createElement('div');row.className='viz-row set-row';
-        const label=document.createElement('span');label.textContent=(exercises[i].unit==='seconds'?'Удержание ':'Подход ')+(j+1);
+        const label=document.createElement('span');label.textContent=(exercises[i].unit==='seconds'?(exercises[i].group==='cardio'?'Интервал ':'Удержание '):'Подход ')+(j+1);
         const controls=document.createElement('div');controls.className='viz-row';
         const field=document.createElement('div');field.style.width='76px';
         const reps=document.createElement('input');reps.type='number';reps.inputMode='numeric';reps.className='form-control';reps.min='1';reps.max='999';reps.value=set.reps===null?'':set.reps;reps.placeholder='—';
-        reps.setAttribute('aria-label',names[i]+(exercises[i].unit==='seconds'?', секунды, удержание ':', повторения, подход ')+(j+1));
+        reps.setAttribute('aria-label',names[i]+(exercises[i].unit==='seconds'?', секунды, подход ':', повторения, подход ')+(j+1));
         reps.onchange=()=>{set.reps=reps.value.trim()===''?null:Math.min(999,Math.max(1,Math.round(Number(reps.value)||1)));reps.value=set.reps===null?'':set.reps;reps.placeholder='—';save();};field.append(reps);
         const checkLabel=document.createElement('label');checkLabel.className='form-check';
         const check=document.createElement('input');check.type='checkbox';check.className='form-check-input';check.checked=set.done;
@@ -137,8 +137,9 @@
     value('exercise-name').textContent=exercise.name;value('movement-title').textContent=exercise.name;
     value('exercise-description').textContent=exercise.description;
     const source=exercise.source;value('exercise-source').hidden=!source;
-    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':exercise.group==='weight'?'Контроль веса · '+exercise.sourceNumber+' из 10':'Моя зарядка';
-    for(const group of ['personal','nhs','weight'])action('group-'+group).setAttribute('aria-pressed',String(exercise.group===group));
+    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':exercise.group==='cardio'?'Кардио сидя · '+exercise.sourceNumber+' из 10':exercise.group==='weight'?'Контроль веса · '+exercise.sourceNumber+' из 10':'Моя зарядка';
+    for(const group of ['personal','nhs','weight','cardio'])action('group-'+group).setAttribute('aria-pressed',String(exercise.group===group));
+    value('cardio-guidance').hidden=exercise.group!=='cardio';
     value('weight-guidance').hidden=exercise.group!=='weight';
     if(source){value('exercise-source').textContent=source.label;value('exercise-source').href=source.url;}
     value('movement').setAttribute('aria-label',exercise.name+': '+exercise.description);
@@ -146,15 +147,15 @@
     value('movement').setAttribute('viewBox',supine?'20 90 320 155':'0 15 360 235');
     drawPose(exercise.pose==='balance'?2:0);render();
   }
-  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup')};
-  groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
-  for(const group of ['personal','nhs','weight'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
+  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup'),cardio:document.createElement('optgroup')};
+  groups.cardio.label='Кардио сидя · 10 упражнений';groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
+  for(const group of ['personal','nhs','weight','cardio'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
   exercises.forEach((exercise,index)=>{
     const option=document.createElement('option');option.value=String(index);
     option.textContent=(exercise.sourceNumber?exercise.sourceNumber+'. ':'')+exercise.name;
     groups[exercise.group].append(option);
   });
-  value('exercise-picker').append(groups.personal,groups.nhs,groups.weight);
+  value('exercise-picker').append(groups.personal,groups.nhs,groups.weight,groups.cardio);
   value('exercise-picker').onchange=()=>selectExercise(Number(value('exercise-picker').value));
   action('previous').onclick=()=>selectExercise((activeExercise+exercises.length-1)%exercises.length);
   action('next').onclick=()=>selectExercise((activeExercise+1)%exercises.length);
@@ -189,3 +190,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController&&!reloading){reloading=true;location.reload();}});
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
 }
+

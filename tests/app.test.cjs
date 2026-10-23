@@ -15,7 +15,7 @@ function create(stored={},blocked=false,reduced=false){
  return {val,act,choose,clock,stored,window,frame:time=>frame(time),tick:()=>Object.values(callbacks).forEach(f=>f())};
 }
 const t=create(),ex=t.window.WORKOUT_EXERCISES,poses=t.window.WORKOUT_POSES;
-assert.equal(ex.length,25);const nhs=ex.filter(e=>e.group==='nhs');assert.equal(nhs.length,12);
+assert.equal(ex.length,35);const nhs=ex.filter(e=>e.group==='nhs');assert.equal(nhs.length,12);
 assert.deepEqual(Array.from(nhs,e=>e.sourceNumber),Array.from({length:12},(_,i)=>i+1));
 for(const e of nhs){assert.equal(e.defaultReps,null);assert(e.source.url.includes('#page='));}
 for(const e of ex){
@@ -53,7 +53,7 @@ assert.equal(create(timer.stored).val('duration').value,'2');
 for(const bad of ['', '0','181','-5','2.5','abc']){timer.val('duration').value=bad;timer.val('duration').onchange();assert.equal(timer.val('duration').value,'2');}
 timer.val('duration').value='1';timer.act('start').onclick();timer.clock.now+=61000;timer.tick();assert.equal(timer.val('timer').textContent,'00:00');assert.equal(timer.val('duration').disabled,false);
 const weight=ex.filter(e=>e.group==='weight');assert.equal(weight.length,10);
-assert.equal(new Set(ex.map(e=>e.id)).size,25);
+assert.equal(new Set(ex.map(e=>e.id)).size,35);
 for(const e of weight){assert.equal(e.defaultReps,null);assert(e.source.url.startsWith('https://www.nhs.uk/'));}
 timer.act('group-weight').onclick();assert.equal(timer.val('exercise-name').textContent,weight[0].name);assert.equal(timer.val('weight-guidance').hidden,false);
 timer.act('group-personal').onclick();assert.equal(timer.val('weight-guidance').hidden,true);
@@ -64,6 +64,17 @@ create({'morning-workout-studio-v1':'{invalid'});
 const ids=Array.from(read('index.html').matchAll(/data-(?:value|action)="([^"]+)"/g),m=>m[1]);
 for(const match of read('app.js').matchAll(/(?:value|action)\('([^']+)'\)/g))assert(ids.includes(match[1]),'missing element '+match[1]);
 assert(read('index.html').indexOf('poses.js')<read('index.html').indexOf('app.js'));
-for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=7'));assert(read('sw.js').includes('./'+name+'?v=7'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v7'));
+for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=8'));assert(read('sw.js').includes('./'+name+'?v=8'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v8'));
+
 for(const icon of JSON.parse(read('manifest.webmanifest')).icons)assert(fs.existsSync(path.join(rootDir,icon.src)));
-console.log('PASS: 25 distinct animations; all 12 NHS numbers/sources; static stretch holds; seconds fields; selector, timer, pause/reset, persistence, legacy migration, corrupt/blocked storage, reduced motion and offline asset list.');
+console.log('PASS: 35 distinct animations; all 12 NHS numbers/sources; static stretch holds; seconds fields; selector, timer, pause/reset, persistence, legacy migration, corrupt/blocked storage, reduced motion and offline asset list.');
+
+
+const cardio=ex.filter(e=>e.group==='cardio');assert.equal(cardio.length,10);
+for(const e of cardio){assert.equal(e.unit,'seconds');assert.equal(e.defaultReps,null);}
+t.act('group-cardio').onclick();assert.equal(t.val('cardio-guidance').hidden,false);assert.equal(t.val('exercise-name').textContent,cardio[0].name);
+t.act('group-personal').onclick();assert.equal(t.val('cardio-guidance').hidden,true);
+// At either half-cycle the raised hand must be opposite the raised foot.
+assert(poses.frame('march',1).svg.includes('210 129'));assert(poses.frame('march',1).svg.includes('133 154'));
+assert(poses.frame('march',3).svg.includes('148 129'));assert(poses.frame('march',3).svg.includes('225 154'));
+console.log('PASS: cardio navigation, seconds and contralateral marching regression.');

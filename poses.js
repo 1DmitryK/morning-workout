@@ -194,14 +194,59 @@ window.WORKOUT_POSES=(()=>{
    }
    if(kind==='standside')svg+=line([sh,[216,122],[245,112]],ink,9)+line([sh,[144,125],[141,150]],ink,9);
    else if(kind==='kneelifts')svg+=line([sh,[138,123],[197-40*l,162-37*l]],ink,9)+line([sh,[220,123],[161+40*q,162-37*q]],ink,9);
-   else svg+=line([sh,[137,124],[133+15*l,154-25*l]],ink,9)+line([sh,[221,124],[225-15*q,154-25*q]],ink,9);
+   else svg+=line([sh,[137,124],[133+15*q,154-25*q]],ink,9)+line([sh,[221,124],[225-15*l,154-25*l]],ink,9);
    if(!side)message=kind==='heeldigs'?(alternating>.15?'Одна пятка впереди':alternating<-.15?'Другая пятка впереди':'Стопы рядом'):alternating>.15?'Одна нога':alternating<-.15?'Другая нога':'Обе стопы на полу';
    if(kind==='standside')detail='Рука на опоре · корпус не наклоняется';
    if(kind==='heeldigs')detail='Пятка впереди · носок вверх';
   }
   return{svg,phase:message,detail};
  }
+ // Seated cardio: a fixed pelvis and visible chair throughout every movement.
+ function cardioFrame(kind,seconds){
+  const a=Math.sin(seconds*Math.PI/2),l=Math.max(0,a),r=Math.max(0,-a),u=(1-Math.cos(seconds*Math.PI/2))/2;
+  const sh=[180,94],hip=[180,153];
+  let svg=ground()+path('M139 107V169H221V107M147 169V233M213 169V233',soft,4);
+  svg+=body([sh,hip])+line([sh,[180,78]],ink,9)+head([180,60],-Math.PI/2);
+  let knees=[[155,177],[205,177]],feet=[[155,225],[205,225]],hands=[[134,153],[226,153]],elbows=[[139,122],[221,122]];
+  if(['march','tap','speedmarch'].includes(kind)){
+   knees[0][1]-=22*l;feet[0][1]-=25*l;knees[1][1]-=22*r;feet[1][1]-=25*r;
+   if(kind==='march')hands=[[134+14*r,153-32*r],[226-14*l,153-32*l]];
+   if(kind==='tap')hands=[[134+71*r,153+2*r],[226-71*l,153+2*l]];
+  }
+  if(['side','sidearms','star'].includes(kind)){
+   const L=kind==='star'?u:l,R=kind==='star'?u:r;
+   feet[0][0]-=36*L;feet[1][0]+=36*R;knees[0][0]-=16*L;knees[1][0]+=16*R;
+   if(kind==='star'){feet[0][1]-=12*u;feet[1][1]-=12*u;}
+   if(kind!=='side'){const h=kind==='star'?u:Math.abs(a);hands=[[134-36*h,153-56*h],[226+36*h,153-56*h]];elbows=[[139-8*h,122-20*h],[221+8*h,122-20*h]];}
+  }
+  if(kind==='vstep'){
+   const c=(seconds%8)/2,blend=t=>(1-Math.cos(Math.PI*t))/2;
+   const L=c<1?blend(c):c<2?1:c<3?1-blend(c-2):0;
+   const R=c<1?0:c<2?blend(c-1):c<3?1:1-blend(c-3);
+   feet=[[155-30*L,225-10*L],[205+30*R,225-10*R]];
+  }
+  if(kind==='kick'){feet=[[155-22*l,225-48*l],[205+22*r,225-48*r]];knees[0][1]-=8*l;knees[1][1]-=8*r;}
+  if(kind==='reach'){hands=[[134+11*u,153-115*u],[226-11*u,153-115*u]];elbows=[[139,122-49*u],[221,122-49*u]];}
+  if(kind==='speed'||kind==='speedmarch'){
+   const c=seconds*Math.PI;hands=[[180+13*Math.cos(c),112+12*Math.sin(c)],[180-13*Math.cos(c),112-12*Math.sin(c)]];elbows=[[137,112],[223,112]];
+  }
+  for(let i=0;i<2;i++){svg+=line([hip,knees[i],feet[i]],ink,10,i?1:.65)+line([feet[i],[feet[i][0]+(i?16:-16),feet[i][1]+7]],blue,9,i?1:.65);}
+  for(let i=0;i<2;i++)svg+=line([sh,elbows[i],hands[i]],ink,9,i?1:.65);
+  const phase=kind==='reach'?(u>.7?'Руки вверх':u<.2?'Руки вниз':'Плавный подъём или опускание'):kind==='star'?(u>.5?'Раскрыться':'Вернуться'):kind==='speed'||kind==='speedmarch'?'Круговые движения предплечий':kind==='vstep'?'По одной стопе: наружу, наружу, обратно, обратно':a>.15?'Движение одной стороны':a<-.15?'Движение другой стороны':'Исходное положение';
+  return {svg,phase,detail:'Сидя · таз на стуле · комфортный темп без задержки дыхания'};
+ }
  const all={
+  'cardio-march':s=>cardioFrame('march',s),
+  'cardio-side':s=>cardioFrame('side',s),
+  'cardio-sidearms':s=>cardioFrame('sidearms',s),
+  'cardio-tap':s=>cardioFrame('tap',s),
+  'cardio-vstep':s=>cardioFrame('vstep',s),
+  'cardio-kick':s=>cardioFrame('kick',s),
+  'cardio-reach':s=>cardioFrame('reach',s),
+  'cardio-speed':s=>cardioFrame('speed',s),
+  'cardio-speedmarch':s=>cardioFrame('speedmarch',s),
+  'cardio-star':s=>cardioFrame('star',s),
+
   march:s=>easyFrame('march',s),
   heeldigs:s=>easyFrame('heeldigs',s),
   kneelifts:s=>easyFrame('kneelifts',s),
@@ -230,3 +275,4 @@ window.WORKOUT_POSES=(()=>{
  };
  return Object.freeze({names:Object.freeze(Object.keys(all)),frame:(pose,seconds)=>{if(!all[pose])throw new Error('Unknown pose: '+pose);return all[pose](Math.max(0,seconds));}});
 })();
+
