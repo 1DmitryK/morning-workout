@@ -15,7 +15,7 @@ function create(stored={},blocked=false,reduced=false){
  return {val,act,choose,clock,stored,window,frame:time=>frame(time),tick:()=>Object.values(callbacks).forEach(f=>f())};
 }
 const t=create(),ex=t.window.WORKOUT_EXERCISES,poses=t.window.WORKOUT_POSES;
-assert.equal(ex.length,35);const nhs=ex.filter(e=>e.group==='nhs');assert.equal(nhs.length,12);
+assert.equal(ex.length,45);const nhs=ex.filter(e=>e.group==='nhs');assert.equal(nhs.length,12);
 assert.deepEqual(Array.from(nhs,e=>e.sourceNumber),Array.from({length:12},(_,i)=>i+1));
 for(const e of nhs){assert.equal(e.defaultReps,null);assert(e.source.url.includes('#page='));}
 for(const e of ex){
@@ -41,7 +41,7 @@ for(const blocked of [false,true])for(const reduced of [false,true]){
 const timer=create();
 assert.equal(timer.act('start').textContent,'Старт');
 timer.val('duration').value='2';timer.val('duration').onchange();assert.equal(timer.val('timer').textContent,'02:00');
-timer.act('start').onclick();assert.equal(timer.act('start').textContent,'Пауза');assert.equal(timer.val('duration').disabled,true);
+timer.act('start').onclick();assert.equal(timer.act('start').textContent,'Пауза');assert.equal(timer.val('duration').disabled,false);
 timer.clock.now+=31000;timer.tick();assert.equal(timer.val('timer').textContent,'01:29');
 timer.act('start').onclick();assert.equal(timer.act('start').textContent,'Продолжить');
 timer.clock.now+=60000;timer.tick();assert.equal(timer.val('timer').textContent,'01:29');
@@ -53,7 +53,7 @@ assert.equal(create(timer.stored).val('duration').value,'2');
 for(const bad of ['', '0','181','-5','2.5','abc']){timer.val('duration').value=bad;timer.val('duration').onchange();assert.equal(timer.val('duration').value,'2');}
 timer.val('duration').value='1';timer.act('start').onclick();timer.clock.now+=61000;timer.tick();assert.equal(timer.val('timer').textContent,'00:00');assert.equal(timer.val('duration').disabled,false);
 const weight=ex.filter(e=>e.group==='weight');assert.equal(weight.length,10);
-assert.equal(new Set(ex.map(e=>e.id)).size,35);
+assert.equal(new Set(ex.map(e=>e.id)).size,45);
 for(const e of weight){assert.equal(e.defaultReps,null);assert(e.source.url.startsWith('https://www.nhs.uk/'));}
 timer.act('group-weight').onclick();assert.equal(timer.val('exercise-name').textContent,weight[0].name);assert.equal(timer.val('weight-guidance').hidden,false);
 timer.act('group-personal').onclick();assert.equal(timer.val('weight-guidance').hidden,true);
@@ -64,10 +64,10 @@ create({'morning-workout-studio-v1':'{invalid'});
 const ids=Array.from(read('index.html').matchAll(/data-(?:value|action)="([^"]+)"/g),m=>m[1]);
 for(const match of read('app.js').matchAll(/(?:value|action)\('([^']+)'\)/g))assert(ids.includes(match[1]),'missing element '+match[1]);
 assert(read('index.html').indexOf('poses.js')<read('index.html').indexOf('app.js'));
-for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=8'));assert(read('sw.js').includes('./'+name+'?v=8'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v8'));
+for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=9'));assert(read('sw.js').includes('./'+name+'?v=9'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v9'));
 
 for(const icon of JSON.parse(read('manifest.webmanifest')).icons)assert(fs.existsSync(path.join(rootDir,icon.src)));
-console.log('PASS: 35 distinct animations; all 12 NHS numbers/sources; static stretch holds; seconds fields; selector, timer, pause/reset, persistence, legacy migration, corrupt/blocked storage, reduced motion and offline asset list.');
+console.log('PASS: 45 distinct animations; all 12 NHS numbers/sources; static stretch holds; seconds fields; selector, timer, pause/reset, persistence, legacy migration, corrupt/blocked storage, reduced motion and offline asset list.');
 
 
 const cardio=ex.filter(e=>e.group==='cardio');assert.equal(cardio.length,10);
@@ -78,3 +78,18 @@ t.act('group-personal').onclick();assert.equal(t.val('cardio-guidance').hidden,t
 assert(poses.frame('march',1).svg.includes('210 129'));assert(poses.frame('march',1).svg.includes('133 154'));
 assert(poses.frame('march',3).svg.includes('148 129'));assert(poses.frame('march',3).svg.includes('225 154'));
 console.log('PASS: cardio navigation, seconds and contralateral marching regression.');
+
+const editable=create();editable.act('start').onclick();editable.clock.now+=10000;editable.tick();
+editable.val('duration').value='7';editable.val('duration').onchange();assert.equal(editable.val('timer').textContent,'07:00');assert.equal(editable.act('start').textContent,'Старт');
+editable.clock.now+=15000;editable.tick();assert.equal(editable.val('timer').textContent,'07:00');
+editable.act('start').onclick();editable.clock.now+=10000;editable.tick();editable.act('start').onclick();
+editable.val('duration').value='3';editable.val('duration').onchange();assert.equal(editable.val('timer').textContent,'03:00');
+editable.act('minute-plus').onclick();assert.equal(editable.val('timer').textContent,'04:00');editable.act('minute-minus').onclick();assert.equal(editable.val('timer').textContent,'03:00');
+for(const n of [1,5,10,15]){editable.act('minutes-'+n).onclick();assert.equal(editable.val('duration').value,String(n));}
+editable.act('start').onclick();editable.clock.now+=10000;editable.tick();editable.val('duration').onchange();assert.equal(editable.val('timer').textContent,'14:50');
+editable.val('duration').value='0';assert.equal(editable.val('duration').onchange(),false);assert.equal(editable.val('duration').value,'15');
+assert.equal(create(editable.stored).val('duration').value,'15');
+const bed=ex.filter(e=>e.group==='bed');assert.equal(bed.length,10);assert.equal(new Set(bed.map(e=>e.pose)).size,10);
+t.act('group-bed').onclick();assert.equal(t.val('bed-guidance').hidden,false);assert.equal(t.val('exercise-name').textContent,bed[0].name);
+t.act('group-cardio').onclick();assert.equal(t.val('bed-guidance').hidden,true);
+console.log('PASS: editable running/paused timers, presets, invalid input, no-op edit and bed navigation.');

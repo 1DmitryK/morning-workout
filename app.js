@@ -82,7 +82,7 @@
   function timerUI(state,message){
     timerState=state;value('timer-status').textContent=message;
     action('start').textContent=state==='running'?'Пауза':state==='paused'?'Продолжить':'Старт';
-    value('duration').disabled=state==='running'||state==='paused';
+    value('duration').disabled=false;
     action('stop').disabled=state!=='running'&&state!=='paused';
   }
   function tick(){
@@ -90,25 +90,37 @@
     if(!left){stop();timerUI('finished','Занятие завершено!');}
   }
   function resetTimer(){stop();left=minutes*60;animationSeconds=0;drawPose(0);showTime();timerUI('idle','Можно начинать');}
-  value('duration').onchange=()=>{
-    if(timerState==='running'||timerState==='paused'){value('duration').value=String(minutes);return;}
-    const candidate=Number(value('duration').value);
-    if(!validMinutes(candidate)){value('duration').value=String(minutes);value('timer-status').textContent='Выбери целое число от 1 до 180 минут.';return;}
-    minutes=candidate;data.durationMinutes=minutes;save();resetTimer();
-  };
+  function setMinutes(candidate){
+    if(!validMinutes(candidate)){
+      value('duration').value=String(minutes);
+      value('timer-status').textContent='Введи целое число от 1 до 180 минут.';
+      return false;
+    }
+    value('duration').value=String(candidate);
+    if(candidate!==minutes){
+      minutes=candidate;data.durationMinutes=minutes;save();resetTimer();
+      value('timer-status').textContent='Установлено '+minutes+' мин · нажми «Старт»';
+    }
+    return true;
+  }
+  value('duration').onchange=()=>setMinutes(Number(value('duration').value));
+  value('duration').onblur=value('duration').onchange;
+  value('duration').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();value('duration').onchange();}};
+  action('apply-minutes').onclick=()=>value('duration').onchange();
+  action('minute-minus').onclick=()=>setMinutes(Math.max(1,minutes-1));
+  action('minute-plus').onclick=()=>setMinutes(Math.min(180,minutes+1));
+  for(const n of [1,5,10,15])action('minutes-'+n).onclick=()=>setMinutes(n);
   action('start').onclick=()=>{
     if(timerState==='running'){
       tick();stop();if(left)timerUI('paused','На паузе · время сохранено');return;
     }
     // Commit a newly typed duration even if Start is clicked before the field loses focus.
     if(timerState!=='paused'){
-      value('duration').onchange();
-      const candidate=Number(value('duration').value);
-      if(!validMinutes(candidate))return;
+      if(!value('duration').onchange())return;
       left=minutes*60;animationSeconds=0;drawPose(0);
     }
     deadline=Date.now()+left*1000;lastFrame=0;
-    timer=setInterval(tick,250);timerUI('running','Идёт общий таймер занятия');tick();
+    timer=setInterval(tick,250);timerUI('running','Идёт отсчёт');tick();
   };
   action('stop').onclick=()=>{stop();left=0;showTime();timerUI('stopped','Занятие остановлено · «Старт» начнёт заново');};
   action('reset').onclick=resetTimer;
@@ -137,8 +149,9 @@
     value('exercise-name').textContent=exercise.name;value('movement-title').textContent=exercise.name;
     value('exercise-description').textContent=exercise.description;
     const source=exercise.source;value('exercise-source').hidden=!source;
-    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':exercise.group==='cardio'?'Кардио сидя · '+exercise.sourceNumber+' из 10':exercise.group==='weight'?'Контроль веса · '+exercise.sourceNumber+' из 10':'Моя зарядка';
-    for(const group of ['personal','nhs','weight','cardio'])action('group-'+group).setAttribute('aria-pressed',String(exercise.group===group));
+    value('exercise-origin').textContent=exercise.group==='nhs'?'NHS · '+exercise.sourceNumber+' из 12':exercise.group==='bed'?'В кровати · '+exercise.sourceNumber+' из 10':exercise.group==='cardio'?'Кардио сидя · '+exercise.sourceNumber+' из 10':exercise.group==='weight'?'Контроль веса · '+exercise.sourceNumber+' из 10':'Моя зарядка';
+    for(const group of ['personal','nhs','weight','cardio','bed'])action('group-'+group).setAttribute('aria-pressed',String(exercise.group===group));
+    value('bed-guidance').hidden=exercise.group!=='bed';
     value('cardio-guidance').hidden=exercise.group!=='cardio';
     value('weight-guidance').hidden=exercise.group!=='weight';
     if(source){value('exercise-source').textContent=source.label;value('exercise-source').href=source.url;}
@@ -147,15 +160,15 @@
     value('movement').setAttribute('viewBox',supine?'20 90 320 155':'0 15 360 235');
     drawPose(exercise.pose==='balance'?2:0);render();
   }
-  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup'),cardio:document.createElement('optgroup')};
-  groups.cardio.label='Кардио сидя · 10 упражнений';groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
-  for(const group of ['personal','nhs','weight','cardio'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
+  const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup'),cardio:document.createElement('optgroup'),bed:document.createElement('optgroup')};
+  groups.bed.label='В кровати · 10 упражнений';groups.cardio.label='Кардио сидя · 10 упражнений';groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
+  for(const group of ['personal','nhs','weight','cardio','bed'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
   exercises.forEach((exercise,index)=>{
     const option=document.createElement('option');option.value=String(index);
     option.textContent=(exercise.sourceNumber?exercise.sourceNumber+'. ':'')+exercise.name;
     groups[exercise.group].append(option);
   });
-  value('exercise-picker').append(groups.personal,groups.nhs,groups.weight,groups.cardio);
+  value('exercise-picker').append(groups.personal,groups.nhs,groups.weight,groups.cardio,groups.bed);
   value('exercise-picker').onchange=()=>selectExercise(Number(value('exercise-picker').value));
   action('previous').onclick=()=>selectExercise((activeExercise+exercises.length-1)%exercises.length);
   action('next').onclick=()=>selectExercise((activeExercise+1)%exercises.length);

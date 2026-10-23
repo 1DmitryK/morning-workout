@@ -235,7 +235,67 @@ window.WORKOUT_POSES=(()=>{
   const phase=kind==='reach'?(u>.7?'Руки вверх':u<.2?'Руки вниз':'Плавный подъём или опускание'):kind==='star'?(u>.5?'Раскрыться':'Вернуться'):kind==='speed'||kind==='speedmarch'?'Круговые движения предплечий':kind==='vstep'?'По одной стопе: наружу, наружу, обратно, обратно':a>.15?'Движение одной стороны':a<-.15?'Движение другой стороны':'Исходное положение';
   return {svg,phase,detail:'Сидя · таз на стуле · комфортный темп без задержки дыхания'};
  }
+
+ // Original bed illustrations: fixed mattress/pillow; shading indicates muscle tension.
+ function bedFrame(kind,seconds){
+  const w=wave(seconds,6),r=w.rise,side=Math.floor(seconds/6)%2;
+  const mattress=()=>path('M27 212H335V225H27ZM36 225V243M326 225V243',soft,3)+path('M39 195Q59 186 80 195V207H39Z',floor,3);
+  let svg=mattress(),phase=w.cycle<.5?'Плавное движение':'Возвращение',detail='Лёжа на спине · удобная амплитуда · без рывков';
+  if(kind==='abduction'){
+   svg=path('M28 42H333V223H28ZM39 105H80V158H39Z',soft,3);
+   const hip=[177,133],sh=[100,133];
+   svg+=head([61,133],-Math.PI/2)+line([[78,133],sh],ink,9)+body([sh,hip]);
+   svg+=line([sh,[121,102],[164,102]],ink,8,.65)+line([sh,[121,164],[164,164]],ink,8);
+   for(let i=0;i<2;i++){const sign=i?1:-1,m=i===side?r:0;svg+=line([hip,[235,133+sign*(15+21*m)],[296-8*m,133+sign*(20+46*m)]],ink,10,i?1:.65)+line([[296-8*m,133+sign*(20+46*m)],[311-8*m,133+sign*(20+46*m)]],blue,9);}
+   detail='Вид сверху · пятка скользит по матрасу · небольшой размах';
+  }else{
+   const sh=[100,187],hip=[180,194];
+   svg+=head([62,177],-Math.PI/2)+line([[79,183],sh],ink,9)+body([sh,hip]);
+   for(let i=0;i<2;i++){
+    const o=i?1:.45,y=i?0:-5,m=i===side?r:0;
+    let knee=[239,195+y],ankle=[299,197+y],toe=[304,178+y];
+    if(kind==='heelslide'){ankle=[299-62*m,197+y];knee=[239-24*m,195-48*m+y];toe=[ankle[0]+5,178+y];}
+    if(kind==='shortarc'&&i===side){knee=[239,174+y];ankle=[295,199-25*r+y];toe=[301,180-25*r+y];}
+    if(kind==='pumps')toe=[299+25*r,175+18*r+y];
+    if(kind==='quads')knee[1]-=3*(1-m);
+    svg+=line([hip,knee,ankle],ink,10,o)+line([ankle,toe],blue,9,o);
+   }
+   if(kind==='shortarc')svg+=circle([239,196],15,soft,.35);
+   if(kind==='quads')svg+=line([[191,190],[226,191]],blue,17,.15+.65*r);
+   if(kind==='glutes')svg+=circle([178,192],18,blue,.1+.6*r);
+   for(let i=0;i<2;i++){
+    const m=i===side?r:0,o=i?1:.45;
+    let elbow=[130,201-i*3],hand=[164,201-i*3];
+    if(kind==='elbows')hand=[130+34*Math.cos(m*2.3),201-34*Math.sin(m*2.3)];
+    if(kind==='arms'){const angle=m*Math.PI/2;elbow=[100+32*Math.cos(angle),187-32*Math.sin(angle)];hand=[100+66*Math.cos(angle),187-66*Math.sin(angle)];}
+    svg+=line([sh,elbow,hand],ink,8,o);
+   }
+   if(kind==='hands'||kind==='wrists'){
+    svg+=path('M218 37H332V135H218Z',floor,2)+line([[238,122],[265,99]],soft,8);
+    const angle=kind==='wrists'?(r-.5)*1.2:0;
+    const rotate=p=>[265+(p[0]-265)*Math.cos(angle)-(p[1]-99)*Math.sin(angle),99+(p[0]-265)*Math.sin(angle)+(p[1]-99)*Math.cos(angle)];
+    svg+=line([rotate([265,99]),rotate([278,84])],ink,13);
+    for(let i=0;i<4;i++){const spread=kind==='hands'?1-r:1;svg+=line([rotate([274+i*3,86+i*2]),rotate([277+i*6,82+i*2-23*spread])],ink,4);}
+    svg+=line([rotate([269,90]),rotate([257-8*(1-r),78])],ink,4);
+    detail='Лёжа · кисть показана крупно во вставке';
+   }
+  }
+  if(kind==='quads'||kind==='glutes')phase=r>.7?'Мягкое напряжение':r<.2?'Расслабление':'Напряжение и расслабление';
+  if(kind==='hands')phase=r>.7?'Пальцы согнуты':r<.2?'Ладонь раскрыта':'Мягкое движение пальцев';
+  if(kind==='pumps')phase=r>.7?'Стопы от себя':r<.2?'Стопы на себя':'Движение стоп';
+  return {svg,phase,detail};
+ }
  const all={
+  'bed-pumps':s=>bedFrame('pumps',s),
+  'bed-hands':s=>bedFrame('hands',s),
+  'bed-wrists':s=>bedFrame('wrists',s),
+  'bed-elbows':s=>bedFrame('elbows',s),
+  'bed-arms':s=>bedFrame('arms',s),
+  'bed-heelslide':s=>bedFrame('heelslide',s),
+  'bed-quads':s=>bedFrame('quads',s),
+  'bed-glutes':s=>bedFrame('glutes',s),
+  'bed-abduction':s=>bedFrame('abduction',s),
+  'bed-shortarc':s=>bedFrame('shortarc',s),
   'cardio-march':s=>cardioFrame('march',s),
   'cardio-side':s=>cardioFrame('side',s),
   'cardio-sidearms':s=>cardioFrame('sidearms',s),

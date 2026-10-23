@@ -8,3 +8,5 @@
 .timer-controls{flex-wrap:nowrap}.timer-controls .btn{min-width:0;flex:1;padding:11px 8px}.timer-controls [data-action=start]{flex:1.6}
 
 .exercise-navigation{flex-wrap:nowrap}.exercise-navigation [data-value=exercise-origin]{flex:1;min-width:0;text-align:center;font-size:12px}
+
+.minute-editor{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0}.minute-editor .btn{min-width:48px;font-size:24px}.minute-editor .duration-label{gap:8px}.timer-presets{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:12px 0}.timer-presets .btn{font-size:14px;padding:8px 12px}.block-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.block-picker .btn:last-child{grid-column:1 / -1}@media(max-width:380px){.block-picker{grid-template-columns:1fr}}

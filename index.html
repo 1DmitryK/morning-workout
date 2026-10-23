@@ -1,18 +1,20 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=8"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=9"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
 <div id="morning-workout-animated">
   <section data-screen="workout">
     <div class="viz-row" style="justify-content:space-between">
       <div><div class="eyebrow">Моя зарядка</div><h2>Движение каждый день</h2></div>
       
     </div>
-    <p class="intro">35 упражнений с анимациями: твоя зарядка, памятка NHS и мягкий комплекс для контроля веса и кардио сидя. Выбери название и нажми «Старт».</p>
+    <p class="intro">45 упражнений с анимациями: твоя зарядка, памятка NHS и мягкий комплекс для контроля веса, кардио сидя и мягкие движения в кровати. Выбери название и нажми «Старт».</p>
     <nav class="block-picker" aria-label="Блоки упражнений">
       <button type="button" class="btn" data-action="group-personal">Моя зарядка <small>3 упражнения</small></button>
       <button type="button" class="btn" data-action="group-nhs">Памятка NHS <small>12 упражнений</small></button>
       <button type="button" class="btn" data-action="group-weight">Контроль веса <small>10 упражнений · без прыжков</small></button>
       <button type="button" class="btn" data-action="group-cardio">Кардио сидя <small>10 упражнений · для выносливости</small></button>
+      <button type="button" class="btn" data-action="group-bed">В кровати <small>10 упражнений · лёжа</small></button>
     </nav>
+    <p class="weight-guidance text-small" data-value="bed-guidance" hidden>Мягкие движения после пробуждения. Ляг удобно на спину, подальше от края; матрас должен поддерживать тело, рядом должно быть место для движения. Не нужно выполнять все 10 подряд. Начинай с небольшой комфортной амплитуды, без рывков и задержки дыхания. При боли, головокружении или ухудшении самочувствия остановись. Это подборка из памяток NHS, а не личное назначение: согласуй подходящие упражнения с физиотерапевтом. Повторы и время удержаний выбираются индивидуально. Подсветка мышц показывает напряжение, а не подъём тела.</p>
     <p class="weight-guidance text-small" data-value="cardio-guidance" hidden>Выбирай подходящие движения, не обязательно все подряд. Устойчивый стул, стопы достают до пола. Начни с лёгкой разминки; заверши постепенным замедлением. Дыши свободно, сохраняй возможность говорить. Делай паузы по самочувствию. При головокружении, боли в груди или необычной одышке остановись. При нарушении равновесия согласуй новые движения с физиотерапевтом. Это варианты для выбора, а не индивидуальная программа. Темп рисунка условный; в дневнике отмечаются секунды движения.</p>
     <p class="weight-guidance text-small" data-value="weight-guidance" hidden>Мягкий старт: выбирай комфортные движения и увеличивай нагрузку постепенно. Не обязательно делать все 10 подряд. Контроль веса зависит также от питания и регулярной активности. При боли или плохом самочувствии остановись; при ограничениях согласуй упражнения с врачом. Для упражнений со стулом нужна устойчивая опора без колёс.</p>
     <section class="paper">
@@ -29,8 +31,9 @@
       </div>
       <div class="guidance" data-value="exercise-description"></div>
       <a data-value="exercise-source" class="source-link" target="_blank" rel="noopener" hidden></a>
-      <div class="timer-area"><div class="text-small text-center">Общий таймер занятия · не длительность одного подхода</div>
-      <label class="duration-label">Длительность, минут <input class="form-control" type="number" min="1" max="180" step="1" inputmode="numeric" value="5" data-value="duration" aria-label="Длительность в минутах"></label>
+      <div class="timer-area"><div class="text-small text-center">Таймер · установи удобное время</div>
+      <div class="minute-editor"><button type="button" class="btn" data-action="minute-minus" aria-label="Уменьшить на одну минуту">−</button><label class="duration-label">Минуты <input class="form-control" type="number" min="1" max="180" step="1" inputmode="numeric" value="5" data-value="duration" aria-label="Длительность в минутах"></label><button type="button" class="btn" data-action="minute-plus" aria-label="Увеличить на одну минуту">+</button></div>
+<div class="text-center"><button type="button" class="btn" data-action="apply-minutes">Установить время</button></div><div class="timer-presets" aria-label="Быстрый выбор минут"><button type="button" class="btn" data-action="minutes-1">1 мин</button><button type="button" class="btn" data-action="minutes-5">5 мин</button><button type="button" class="btn" data-action="minutes-10">10 мин</button><button type="button" class="btn" data-action="minutes-15">15 мин</button></div><p class="text-small text-center">Минуты доступны всегда. Изменение времени останавливает таймер; новый отсчёт — по кнопке «Старт». Переключение упражнения не сбрасывает время.</p>
       <h1 class="tabular-nums text-center" data-value="timer" role="timer">05:00</h1>
       <div class="viz-row timer-controls">
         <button type="button" class="btn btn-primary" data-action="start">Старт</button>
@@ -58,7 +61,7 @@
       <button type="button" class="btn" data-action="calendar">Добавить в календарь</button>
     </details>
     <details><summary>Как пользоваться и добавить на экран «Домой»</summary>
-      <p>Выбери упражнение и нажми «Старт». Укажи от 1 до 180 минут. Кнопка «Старт» превращается в «Паузу», затем в «Продолжить». «Стоп» завершает занятие, «Сброс» возвращает выбранную длительность. Чтобы изменить минуты во время занятия, сначала нажми «Сброс». Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
+      <p>Выбери упражнение и нажми «Старт». Укажи от 1 до 180 минут. Кнопка «Старт» превращается в «Паузу», затем в «Продолжить». «Стоп» завершает занятие, «Сброс» возвращает выбранную длительность. Минуты доступны всегда: введи число, нажми «−» / «+» или выбери готовое время. Новая длительность останавливает отсчёт и ждёт кнопки «Старт». Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
       <p>В Safari: «Поделиться» → «На экран Домой» → «Открывать как веб-приложение», если переключатель показан → «Добавить».</p>
       <p>Повторения и темп анимации — настройки дневника и условный показ, а не назначенная нагрузка. Для упражнений NHS повторения и секунды оставлены пустыми. Выполняй упражнения из своей согласованной программы; при боли прекрати упражнение.</p>
       <p>Все 12 базовых упражнений NHS доступны в списке. Это библиотека демонстраций, а не назначение выполнять весь комплекс. Выбирай упражнения, согласованные с физиотерапевтом.</p>
@@ -67,4 +70,4 @@
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=8"></script><script src="./poses.js?v=8"></script><script src="./app.js?v=8"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=9"></script><script src="./poses.js?v=9"></script><script src="./app.js?v=9"></script></body></html>
