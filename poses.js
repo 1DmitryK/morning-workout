@@ -105,25 +105,27 @@ window.WORKOUT_POSES=(()=>{
   return svg;
  }
  function quadruped(kind,rise,cycle,seconds){
-  let sh=[119,133],hip=[220,137],knee=[220,221],headP=[91,139],svg=ground();
+  let sh=[119,133],hip=[220,137],knee=[220,229],headP=[91,139],svg=ground();
   const h=kind==='hover'?5*held(cycle):0;
-  if(kind==='hover'){sh=[119,133-h];hip=[220,137-h];knee=[220,221-h];headP=[91,139-h];}
+  if(kind==='hover'){sh=[119,133-h];hip=[220,137-h];knee=[220,229-h];headP=[91,139-h];}
   if(kind==='cat'){
    const arch=(rise-.5)*50;
    svg+=path('M119 133Q170 '+(132-arch)+' 220 137',blue,24);
    headP=[92,137+22*rise];
   }else svg+=body([sh,hip]);
   svg+=line([sh,[120,181],[121,225]],ink,10)+line([[115,228],[93,228]],blue,9);
-  svg+=line([hip,knee,[274,228]],ink,11)+line([[274,228],[278,214]],blue,9);
+  const supportAnkle=kind==='hover'?[271,212]:[274,228];
+  svg+=line([hip,knee,supportAnkle],ink,11);
+  svg+=kind==='hover'?line([[271,212],[280,227],[282,234]],blue,9):line([[274,228],[295,230]],blue,9);
   if(kind==='birddog'){
    const side=Math.floor(seconds/6)%2,extension=held(cycle);
    const armEnd=[116-77*extension,225-104*extension],legEnd=[274+51*extension,228-91*extension];
    svg+=line([[sh[0]+5,sh[1]+2],[119-37*extension,181-52*extension],armEnd],blue,10,side?.45:1);
-   svg+=line([[hip[0]+5,hip[1]+2],[220+53*extension,221-84*extension],legEnd],ink,11,side?1:.45);
+   svg+=line([[hip[0]+5,hip[1]+2],[220+53*extension,229-92*extension],legEnd],ink,11,side?1:.45);
    svg+=line([legEnd,[legEnd[0]+15,legEnd[1]+2]],blue,9,side?1:.45);
   }else{
    svg+=line([[125,136-h],[135,181],[136,225]],ink,9,.35);
-   svg+=line([[227,139-h],[230,221-h],[284,228]],ink,9,.35);
+   svg+=line([[227,139-h],[230,229-h],[284,228]],ink,9,.35);
   }
   svg+=line([sh,[108,133-h]],ink,10)+head(headP,2.8);
   return svg;
