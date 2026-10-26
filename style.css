@@ -16,3 +16,5 @@
 
 
 .muscle-panel{max-width:520px;margin:12px auto 18px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--card);text-align:center}.muscle-panel p{margin-top:8px;font-size:13px}.muscle-panel .text-small{font-size:11px;line-height:1.5}
+
+.movement-stage{background:linear-gradient(145deg,#e9f1f5 0%,#f8fafb 55%,#e5edf2 100%)}

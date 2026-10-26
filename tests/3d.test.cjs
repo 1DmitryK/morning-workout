@@ -7,7 +7,7 @@ try{
  const context=await browser.newContext({viewport:{width:900,height:1100}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>window.WORKOUT_3D);
  assert.equal(await page.locator('[data-action="reminder"],[data-action="calendar"],[data-value="reminder-time"]').count(),0);
  const result=await page.evaluate(async()=>{
-  const {sample,supported}=await import('/motion3d.js?v=13'),trainer=window.WORKOUT_3D,render=trainer.renderer.render;trainer.renderer.render=()=>{};const failures=[];
+  const {sample,supported}=await import('/motion3d.js?v=14'),trainer=window.WORKOUT_3D,render=trainer.renderer.render;trainer.renderer.render=()=>{};const failures=[];
   for(const pose of supported)for(let t=0;t<12;t+=.25){trainer.draw(pose,t);if(trainer.diagnostics.some(d=>d.error>.006))failures.push({pose,t,type:'unreachable endpoint'});trainer.body.traverse(o=>{if(![...o.position,...o.quaternion,...o.scale].every(Number.isFinite))failures.push({pose,t,type:'invalid transform'});});const p=sample(pose,t);if(pose==='march'&&p.feet.every(f=>f[1]>.091))failures.push({pose,t,type:'both feet lifted'});}
   trainer.renderer.render=render;return {count:supported.length,failures};
  });assert.equal(result.count,45);assert.deepEqual(result.failures,[]);

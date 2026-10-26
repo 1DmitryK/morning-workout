@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
-import {muscleInfo} from './muscles.js?v=13';
-import {sample,supported} from './motion3d.js?v=13';
+import {muscleInfo} from './muscles.js?v=14';
+import {sample,supported} from './motion3d.js?v=14';
 const V=a=>new T.Vector3(...a),up=new T.Vector3(0,1,0);
 // Analytic two-bone IK: retain segment length and keep knees/elbows on their intended side.
 export function joint(a,b,pole,l1,l2){
@@ -19,27 +19,64 @@ class Trainer{
   this.scene.add(new T.HemisphereLight(0xe7eeff,0xb6a8a3,2.2));
   const key=new T.DirectionalLight(0xfff3df,3.1);key.position.set(-3,5,4);key.castShadow=true;key.shadow.mapSize.set(1024,1024);Object.assign(key.shadow.camera,{left:-2,right:2,top:3,bottom:-2,near:.1,far:12});key.shadow.bias=-.0003;key.shadow.normalBias=.012;key.shadow.radius=3;this.scene.add(key);
   const fill=new T.DirectionalLight(0xc9dcff,1.5);fill.position.set(3,3,-3);this.scene.add(fill);
-  this.mat={};for(const [k,c] of Object.entries({skin:0xd9a386,shirt:0x496bd4,pants:0x263955,hair:0x392d2a,white:0xf1f2ef,sole:0xb6c4d5,eye:0x293344,lip:0x995e52,prop:0x9daec3,wood:0xd9c8b9,bed:0xdbe5f2,mat:0xb8c9d9,highlight:0x6cbcb0}))this.mat[k]=new T.MeshStandardMaterial({color:c,roughness:.78});
-  this.sphere=new T.SphereGeometry(1,24,16);this.cylinder=new T.CylinderGeometry(1,1,1,20);this.cone=new T.LatheGeometry([[0,-.5],[.78,-.5],[.95,-.45],[1,-.30],[.98,.28],[.85,.45],[.65,.5],[0,.5]].map(([x,y])=>new T.Vector2(x,y)),24);
+  this.mat={};for(const [k,c] of Object.entries({skin:0xe0ac8c,shirt:0x267fa4,pants:0x244e67,hair:0x35241d,curl:0x453024,iris:0x79502f,blush:0xc38b73,mouth:0x633e36,seam:0x73b0c4,shoe:0x225a79,white:0xf1f2ef,sole:0xb6c4d5,eye:0x293344,lip:0x995e52,prop:0x9daec3,wood:0xd9c8b9,bed:0xdbe5f2,mat:0xb8c9d9,highlight:0x6cbcb0}))this.mat[k]=new T.MeshStandardMaterial({color:c,roughness:.78});
+  this.mat.skin.roughness=.62;this.mat.white.roughness=.52;this.mat.iris.roughness=.3;
+  this.sphere=new T.SphereGeometry(1,32,24);this.cylinder=new T.CylinderGeometry(1,1,1,20);this.cone=new T.LatheGeometry([[0,-.5],[.78,-.5],[.95,-.45],[1,-.30],[.98,.28],[.85,.45],[.65,.5],[0,.5]].map(([x,y])=>new T.Vector2(x,y)),24);
   this.body=new T.Group();this.scene.add(this.body);this.props=new T.Group();this.scene.add(this.props);
-  this.parts={};this.parts.hip=this.ellipsoid(this.body,[.18,.13,.12],'pants');this.parts.torso=this.ellipsoid(this.body,[.225,.29,.125],'shirt');this.parts.torso.geometry=new T.LatheGeometry([[0,-.52],[.65,-.52],[.84,-.43],[.82,-.15],[1,.30],[.96,.43],[.68,.50],[.28,.54],[0,.54]].map(([x,y])=>new T.Vector2(x,y)),32);this.parts.neck=this.ellipsoid(this.body,[.065,.09,.065],'skin');
-  this.head=new T.Group();this.body.add(this.head);this.ellipsoid(this.head,[.105,.14,.105],'skin',[0,0,0]);
-  const hair=new T.Mesh(new T.SphereGeometry(1,24,16,0,Math.PI*2,0,1.49),this.mat.hair);hair.scale.set(.108,.145,.109);hair.position.y=.012;this.head.add(hair);
-  this.ellipsoid(this.head,[.033,.018,.049],'hair',[-.045,.095,.086]);
-  this.ellipsoid(this.head,[.023,.037,.033],'skin',[0,-.012,.102]);
-  for(const sign of [-1,1]){this.ellipsoid(this.head,[.021,.032,.018],'skin',[sign*.103,-.014,0]);this.ellipsoid(this.head,[.023,.014,.009],'white',[sign*.039,.018,.095]);this.ellipsoid(this.head,[.009,.01,.006],'eye',[sign*.039,.018,.104]);this.ellipsoid(this.head,[.025,.006,.008],'hair',[sign*.039,.043,.094]);}
-  this.ellipsoid(this.head,[.026,.006,.006],'lip',[0,-.065,.087]);
+  this.parts={};this.parts.hip=this.ellipsoid(this.body,[.18,.13,.12],'pants');this.parts.torso=this.ellipsoid(this.body,[.225,.29,.125],'shirt');this.parts.torso.geometry=new T.LatheGeometry([[0,-.52],[.65,-.52],[.77,-.43],[.78,-.15],[1.04,.24],[.98,.42],[.68,.50],[.28,.54],[0,.54]].map(([x,y])=>new T.Vector2(x,y)),32);this.parts.neck=this.ellipsoid(this.body,[.065,.09,.065],'skin');
+  this.clothing=new T.Group();this.body.add(this.clothing);this.createClothing();
+  this.head=new T.Group();this.body.add(this.head);
+  const face=this.ellipsoid(this.head,[.111,.154,.108],'skin');face.geometry=this.sphere.clone();
+  const facePoints=face.geometry.attributes.position;for(let i=0;i<facePoints.count;i++){const y=facePoints.getY(i);if(y<-.15)facePoints.setX(i,facePoints.getX(i)*(1-.18*Math.min(1,(-y-.15)/.85)));}face.geometry.computeVertexNormals();
+  
+  this.ellipsoid(this.head,[.014,.042,.020],'skin',[0,.007,.103]);
+  this.ellipsoid(this.head,[.024,.021,.024],'skin',[0,-.017,.119]);
+  for(const sign of [-1,1]){
+   this.ellipsoid(this.head,[.022,.033,.020],'skin',[sign*.108,-.012,0]);
+   this.ellipsoid(this.head,[.010,.020,.008],'blush',[sign*.12,-.012,.013]);
+   
+   this.ellipsoid(this.head,[.025,.019,.010],'white',[sign*.043,.027,.096]);
+   this.ellipsoid(this.head,[.011,.014,.005],'iris',[sign*.043,.026,.108]);
+   this.ellipsoid(this.head,[.0065,.010,.004],'eye',[sign*.042,.026,.113]);
+   this.ellipsoid(this.head,[.004,.005,.0025],'white',[sign*.043-.004,.033,.116]);
+   this.detailCurve(this.head,[[sign*.017,.060,.099],[sign*.039,.069,.098],[sign*.067,.060,.087]],.006,'hair');
+   this.detailCurve(this.head,[[sign*.018,.035,.104],[sign*.043,.050,.106],[sign*.069,.035,.095]],.0023,'blush');
+  }
+  this.ellipsoid(this.head,[.041,.015,.009],'mouth',[0,-.063,.098]);
+  this.ellipsoid(this.head,[.028,.005,.005],'white',[0,-.059,.107]);
+  this.detailCurve(this.head,[[-.043,-.056,.092],[0,-.077,.105],[.043,-.056,.092]],.004,'lip');
+  const cap=new T.Mesh(new T.SphereGeometry(1,32,20,0,Math.PI*2,0,1.25),this.mat.hair);cap.scale.set(.116,.135,.113);cap.position.y=.035;this.head.add(cap);
+  // A single merged curl mesh keeps the detailed hairstyle inexpensive to draw.
+  const curls=[];
+  for(let i=0;i<64;i++){
+   const theta=.12+1.15*Math.sqrt((i+.5)/64),phi=i*2.399963,normal=new T.Vector3(Math.sin(theta)*Math.cos(phi),Math.cos(theta),Math.sin(theta)*Math.sin(phi));
+   const centre=new T.Vector3(normal.x*.115,.035+normal.y*.14,normal.z*.112),q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),normal);
+   const geometry=new T.TorusGeometry(.014+.004*Math.sin(i*2.7),.0065,8,16,Math.PI*1.85);geometry.applyQuaternion(q);geometry.translate(centre.x,centre.y,centre.z);curls.push(geometry.toNonIndexed());geometry.dispose();
+  }
+  const hairGeo=new T.BufferGeometry();for(const attribute of ['position','normal']){const arrays=curls.map(g=>g.attributes[attribute].array),data=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const array of arrays){data.set(array,at);at+=array.length;}hairGeo.setAttribute(attribute,new T.BufferAttribute(data,3));}
+  curls.forEach(g=>g.dispose());const curlsMesh=new T.Mesh(hairGeo,this.mat.curl);curlsMesh.castShadow=true;this.head.add(curlsMesh);this.head.scale.setScalar(1.07);
   this.limbs=[];for(let i=0;i<4;i++){
    const arm=i<2,colour=arm?'skin':'pants',w=arm?.052:.08;
    const group={upper:this.segmentMesh(colour),lower:this.segmentMesh(colour),joint:this.ellipsoid(this.body,[w,w,w],colour),start:this.ellipsoid(this.body,[w*1.2,w*1.2,w*1.2],arm?'shirt':colour),end:new T.Group(),arm,w};this.body.add(group.end);
    if(arm){group.sleeve=this.segmentMesh('shirt');this.ellipsoid(group.end,[.038,.062,.023],'skin',[0,-.015,0]);group.fingers=[];for(let f=0;f<4;f++)group.fingers.push(this.ellipsoid(group.end,[.007,.033,.008],'skin',[(f-1.5)*.016,-.073,0]));this.ellipsoid(group.end,[.012,.035,.012],'skin',[.036,-.023,.004]);}
-   else{this.ellipsoid(group.end,[.075,.049,.145],'white',[0,-.025,.06]);this.ellipsoid(group.end,[.076,.018,.148],'sole',[0,-.064,.06]);for(let l=0;l<3;l++)this.ellipsoid(group.end,[.047,.005,.006],'sole',[0,.015,.055+l*.023]);}
+   else{this.ellipsoid(group.end,[.075,.049,.145],'shoe',[0,-.025,.06]);this.ellipsoid(group.end,[.076,.018,.148],'white',[0,-.064,.06]);for(let l=0;l<3;l++)this.ellipsoid(group.end,[.047,.005,.006],'white',[0,.015,.055+l*.023]);}
    group.surface=this.makeSurface(colour);group.upper.visible=false;group.lower.visible=false;group.joint.visible=false;group.start.scale.multiplyScalar(arm?.88:1.06);group.grip=arm?this.makeGrip():null;if(group.grip)this.body.add(group.grip);this.limbs.push(group);
   }
   this.musclePatches=[];this.createMusclePatches();
   const floor=new T.Mesh(new T.PlaneGeometry(200,200),new T.ShadowMaterial({opacity:.16}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;this.scene.add(floor);
   this.resize=new ResizeObserver(()=>this.draw(this.pose,this.time));this.resize.observe(host);
   this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();this.dead=true;host.hidden=true;document.querySelector('[data-value="movement"]').style.display='block';document.querySelector('[data-value="view-controls"]').hidden=true;document.querySelector('[data-value="muscle-panel"]').hidden=true;});
+ }
+ detailCurve(parent,points,radius,material){
+  const mesh=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(V)),24,radius,8,false),this.mat[material]);parent.add(mesh);return mesh;
+ }
+ createClothing(){
+  // All decoration stays attached to the torso, away from moving joints.
+  const collar=[];for(let i=0;i<=32;i++){const a=i/32*Math.PI*2;collar.push([.071*Math.cos(a),.012,.066*Math.sin(a)]);}this.detailCurve(this.clothing,collar,.004,'seam');
+  for(const sign of [-1,1]){
+   this.detailCurve(this.clothing,[[sign*.12,-.015,.095],[sign*.164,-.09,.088],[sign*.15,-.22,.080],[sign*.13,-.39,.075]],.0028,'seam');
+  }
+  this.detailCurve(this.clothing,[[-.14,-.44,.07],[0,-.45,.105],[.14,-.44,.07]],.003,'seam');
  }
  makeSurface(colour){
   const rows=28,cols=20,g=new T.BufferGeometry(),positions=new Float32Array((rows+1)*(cols+1)*3),indices=[];
@@ -50,7 +87,7 @@ class Trainer{
  updateSurface(mesh,a,b,c,arm,front,side){
   const curve=new T.CatmullRomCurve3([a,a.clone().lerp(b,.52),b,b.clone().lerp(c,.48),c],false,'centripetal');
   const {rows,cols}=mesh.userData,pos=mesh.geometry.attributes.position,col=mesh.geometry.attributes.color,base=this.mat[mesh.userData.baseColour].color,active=new T.Color(this.muscleState.stretch?0x55b9d3:0xf18b59),state=this.muscleState;
-  const radii=arm?[.060,.066,.039,.049,.025]:[.094,.103,.062,.077,.040];
+  const radii=arm?[.062,.070,.040,.051,.025]:[.094,.108,.064,.078,.040];
   let lastN=null;
   for(let y=0;y<=rows;y++){
    const t=y/rows,centre=curve.getPoint(t),tangent=curve.getTangent(t).normalize();
@@ -63,7 +100,7 @@ class Trainer{
     let weight=0;const on=key=>state.selected.includes(key);
     if(arm){if(on('biceps'))weight=Math.max(weight,upper*Math.max(0,facing));if(on('triceps'))weight=Math.max(weight,upper*Math.max(0,-facing));if(on('forearms'))weight=Math.max(weight,lower);}
     else{if(on('quads'))weight=Math.max(weight,upper*Math.max(0,facing));if(on('hamstrings'))weight=Math.max(weight,upper*Math.max(0,-facing));if(on('calves'))weight=Math.max(weight,lower*Math.max(0,-facing));if(on('shins'))weight=Math.max(weight,lower*Math.max(0,facing));}
-    const colour=base.clone().lerp(active,this.showMuscles===false?0:weight*state.side[side]*(.65+.3*state.visibility));col.setXYZ(index,colour.r,colour.g,colour.b);
+    const clothBase=!arm&&t<.44?this.mat.shirt.color:base;const colour=clothBase.clone().lerp(active,this.showMuscles===false?0:weight*state.side[side]*(.65+.3*state.visibility));if(!arm&&Math.abs(t-.43)<.012)colour.lerp(this.mat.seam.color,.45);col.setXYZ(index,colour.r,colour.g,colour.b);
    }
   }
   pos.needsUpdate=true;col.needsUpdate=true;mesh.geometry.computeVertexNormals();
@@ -139,7 +176,7 @@ class Trainer{
   if(prone)orient.setFromEuler(new T.Euler(-Math.PI/2,0,0)).multiply(new T.Quaternion().setFromAxisAngle(up,Math.PI));
   const side=prone?new T.Vector3(1,0,0):new T.Vector3(1,0,0).applyQuaternion(orient),front=new T.Vector3(0,0,1).applyQuaternion(orient);
   this.parts.hip.position.copy(hip);this.parts.hip.quaternion.copy(orient);
-  this.parts.torso.position.copy(hip).lerp(chest,.52);this.parts.torso.position.addScaledVector(front,p.arch||0);this.parts.torso.scale.set(.205*(1+.006*Math.sin(time*Math.PI/3)),hip.distanceTo(chest),.125*(1+.008*Math.sin(time*Math.PI/3)));this.parts.torso.quaternion.copy(orient);
+  this.parts.torso.position.copy(hip).lerp(chest,.52);this.parts.torso.position.addScaledVector(front,p.arch||0);this.parts.torso.scale.set(.205*(1+.006*Math.sin(time*Math.PI/3)),hip.distanceTo(chest),.125*(1+.008*Math.sin(time*Math.PI/3)));this.parts.torso.quaternion.copy(orient);this.clothing.position.copy(chest);this.clothing.quaternion.copy(orient);
   this.parts.torso.material=this.mat.shirt;this.parts.hip.material=this.mat.pants;
   const neck=chest.clone().addScaledVector(axis,.065),head=chest.clone().addScaledVector(axis,.23);
   this.parts.neck.position.copy(neck);this.parts.neck.quaternion.copy(orient);this.head.position.copy(head);this.head.quaternion.copy(orient).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),p.headTilt||0));
@@ -166,7 +203,7 @@ class Trainer{
   const w=this.host.clientWidth||600,h=this.host.clientHeight||430;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;
   const target=new T.Vector3(0,lying?(p.prop==='bed'?.61:.23):prone?.45:.90,lying?.12:prone?.2:.08);
   const yaw=this.view==='front'?0:this.view==='side'?Math.PI/2:this.view==='back'?Math.PI:(prone?2.25:this.yaw);
-  const elevation=lying?.72:prone?.36:this.elevation,dist=Math.max(lying||prone?3.8:3.9,(lying||prone?2.5:1.55)/(2*Math.tan(16*Math.PI/180)*this.camera.aspect));
+  const elevation=lying?.72:prone?.36:this.elevation,dist=Math.max(lying||prone?3.8:4.05,(lying||prone?2.5:1.55)/(2*Math.tan(16*Math.PI/180)*this.camera.aspect));
   this.camera.position.set(target.x+Math.sin(yaw)*dist,target.y+dist*elevation,target.z+Math.cos(yaw)*dist);this.camera.lookAt(target);this.camera.updateProjectionMatrix();this.renderer.render(this.scene,this.camera);return true;
  }
 }

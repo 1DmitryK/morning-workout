@@ -1,6 +1,6 @@
 'use strict';
-const CACHE='workout-studio-v13';
-const ASSETS=['./','./index.html','./style.css?v=13','./exercises.js?v=13','./poses.js?v=13','./app.js?v=13','./trainer3d.js?v=13','./motion3d.js?v=13','./muscles.js?v=13','./vendor/three.module.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
+const CACHE='workout-studio-v14';
+const ASSETS=['./','./index.html','./style.css?v=14','./exercises.js?v=14','./poses.js?v=14','./app.js?v=14','./trainer3d.js?v=14','./motion3d.js?v=14','./muscles.js?v=14','./vendor/three.module.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('workout-studio-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
