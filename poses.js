@@ -35,10 +35,10 @@ window.WORKOUT_POSES=(()=>{
   }
   return path('M'+points.map(pt).join('L'),c,w,o);
  }
- const head=(p,angle=0)=>{
-  // Angle follows the original view: profile upright, face upwards when lying.
+ const head=(p,angle=0,faceLeft=false)=>{
+  // Tilt and facing are independent: mirror the face without turning the skull upside down.
   const a=angle*180/Math.PI;
-  return '<g class="human-head" transform="translate('+pt(p)+') rotate('+fmt(a)+')">'+
+  return '<g class="human-head" transform="translate('+pt(p)+') rotate('+fmt(a)+') scale('+(faceLeft?-1:1)+' 1)">'+
    '<path d="M-8 -9Q-15 -3 -11 8Q-6 17 4 13L9 8L14 5L10 1Q11 -9 2 -13Z" fill="'+skin+'"/>'+
    '<path d="M-11 3Q-18 -7 -7 -15Q4 -21 11 -10L8 -5Q3 -7 0 -6L-5 2Z" fill="#3d302c"/>'+
    '<ellipse cx="-5" cy="3" rx="3" ry="4" fill="'+skinShadow+'"/>'+
@@ -70,7 +70,7 @@ window.WORKOUT_POSES=(()=>{
   svg+=line([[hip[0]+5,hip[1]+3],[239,156],[281,226]],ink,10,.35)+foot([281,226],[308,232],blue,.35);
   svg+=path('M'+pt(sh)+'Q'+pt([143,pelvic?197+16*rise:(sh[1]+hip[1])/2-3])+' '+pt(hip),blue,24);
   svg+=line([hip,[231,151],[274,226]])+foot([274,226],[301,232]);
-  svg+=line([sh,rotate([84,208])],ink,10)+head(skull,-Math.PI/2);
+  svg+=line([sh,rotate([84,208])],ink,10)+head(skull,-Math.PI/2+a);
   if(crunch){svg+=line([sh,rotate([101,175]),rotate([60,191])],ink,9);}
   else{svg+=line([sh,[131,224],[169,226]],ink,9);}
   if(pelvic){svg+=path('M133 217Q151 '+(203+12*rise)+' 169 217',soft,2);svg+=circle([179,hip[1]-2],5,blue);}
@@ -134,7 +134,7 @@ window.WORKOUT_POSES=(()=>{
   let svg=ground()+wall(295);
   svg+=line([[hip[0]+5,hip[1]+2],[knee[0]+8,knee[1]+3],[237,222]],ink,10,.35)+foot([237,222],[209,232],blue,.35);
   svg+=body([sh,hip])+line([hip,knee,[229,221]])+foot([229,221],[201,232]);
-  svg+=line([sh,[278,78+39*rise]],ink,9)+head([278,62+39*rise],Math.PI);
+  svg+=line([sh,[278,78+39*rise]],ink,9)+head([278,62+39*rise],0,true);
   svg+=line([sh,[235,116+39*rise],[217,135+39*rise]],ink,9);
   return svg;
  }
@@ -171,7 +171,7 @@ window.WORKOUT_POSES=(()=>{
    svg+=line([[125,136-h],[135,181],[136,225]],ink,9,.35);
    svg+=line([[227,139-h],[230,229-h],[284,228]],ink,9,.35);
   }
-  svg+=line([sh,[108,133-h]],ink,10)+head(headP,2.8);
+  svg+=line([sh,[108,133-h]],ink,10)+head(headP,-Math.PI/2,true);
   return svg;
  }
  // Gentle block: original front/side views with continuous, alternating movement.
