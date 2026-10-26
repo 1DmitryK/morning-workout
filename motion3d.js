@@ -7,13 +7,13 @@ const pulse=(t,d=6)=>{const c=cycle(t,d);return c<.3?ease(c/.3):c<.58?1:1-ease((
 const alternate=(t,d=3)=>{const lift=x=>{const c=cycle(x,d*2);return c<.5?(1-Math.cos(c*4*pi))/2:0};return [lift(t),lift(t+d)]};
 const add=(a,b)=>a.map((v,i)=>v+b[i]);
 const v=(x,y,z)=>[x,y,z];
-export const supported=['march','heeldigs','kneelifts','sidesteps','sitstand','minisquat','standside','standback','curls','seatmarch','heels','balance','ankles','pelvic','bridge','sideleg','crunch','rotation','squat','wallpush','cat','birddog','hover','hipstretch','legstretch',...['march','side','sidearms','tap','vstep','kick','reach','speed','speedmarch','star'].map(x=>'cardio-'+x),...['pumps','hands','wrists','elbows','arms','heelslide','quads','glutes','abduction','shortarc'].map(x=>'bed-'+x)];
+export const supported=['seated-wrist-extension','seated-ankle-circles','towel-toe-curls','march','heeldigs','kneelifts','sidesteps','sitstand','minisquat','standside','standback','curls','seatmarch','heels','balance','ankles','pelvic','bridge','sideleg','crunch','rotation','squat','wallpush','cat','birddog','hover','hipstretch','legstretch',...['march','side','sidearms','tap','vstep','kick','reach','speed','speedmarch','star'].map(x=>'cardio-'+x),...['pumps','hands','wrists','elbows','arms','heelslide','quads','glutes','abduction','shortarc'].map(x=>'bed-'+x)];
 export function sample(pose,t){
  if(!supported.includes(pose))throw Error('Unknown 3D motion '+pose);
  const r=pulse(t),a=alternate(t,3),s=Math.sin(t*pi/3),p={hip:v(0,.96,0),chest:v(0,1.43,0),feet:[v(-.13,.09,0),v(.13,.09,0)],hands:[v(-.27,.93,.05),v(.27,.93,.05)],kneePole:[v(-.13,.6,1),v(.13,.6,1)],elbowPole:[v(-1,1,.2),v(1,1,.2)],footPitch:[0,0],finger:0,wrist:0,prop:'none',mode:'standing',turn:0,headTilt:0,highlight:0};
  const seated=()=>{p.mode='seated';p.prop='chair';p.hip=v(0,.59,0);p.chest=v(0,1.07,0);p.feet=[v(-.14,.09,.44),v(.14,.09,.44)];p.hands=[v(-.28,.70,.25),v(.28,.70,.25)];p.kneePole=[v(-.15,.6,1),v(.15,.6,1)];};
  const support=()=>{p.prop='rail';p.hands=[v(-.30,1.157,.36),v(.30,1.157,.36)];};
- if(pose.startsWith('cardio-')||['seatmarch','curls','ankles','hipstretch','legstretch','sitstand'].includes(pose))seated();
+ if(pose.startsWith('cardio-')||['seatmarch','curls','ankles','hipstretch','legstretch','sitstand','seated-wrist-extension','seated-ankle-circles','towel-toe-curls'].includes(pose))seated();
  if(pose.startsWith('cardio-')){
   const kind=pose.slice(7); const u=(1-Math.cos(t*pi/3))/2;
   for(let i=0;i<2;i++){
@@ -43,6 +43,14 @@ export function sample(pose,t){
    const c=cycle(t,8)*4;let L=0,R=0;if(c<1)R=.35*ease(c);else if(c<2){R=.35;L=.35*ease(c-1);}else if(c<3){R=.35;L=.35*(1-ease(c-2));}else R=.35*(1-ease(c-3));
    p.feet[0][0]+=L;p.feet[1][0]+=R;p.hip[0]=(L+R)/2;p.chest[0]=p.hip[0];p.hip[1]-=.02*Math.abs(L-R)/.35;p.chest[1]-=.02*Math.abs(L-R)/.35;p.hands=p.hands.map(h=>add(h,[p.hip[0],0,0]));
   }
+ }else if(pose==='seated-wrist-extension'){
+  p.prop='chair-table';p.hands=[v(-.24,.83,.47),v(.24,.83,.47)];p.elbowPole=[v(-.24,.81,.20),v(.24,.81,.20)];p.wrist=.4*r;
+ }else if(pose==='seated-ankle-circles'){
+  p.prop='chair-footrest';p.feet[1]=v(.14,.37,.72);p.hands=[v(-.27,.65,.1),v(.27,.65,.1)];
+  const direction=Math.floor(t/6)%2?-1:1,theta=direction*2*pi*ease(cycle(t));
+  p.footPitch[1]=.25*Math.sin(theta);p.footRoll=[0,.20*Math.cos(theta)];
+ }else if(pose==='towel-toe-curls'){
+  p.prop='chair-towel';p.feet.forEach(f=>f[1]=.078);p.bareFeet=true;p.toeCurl=r;p.towelPull=.08*r;p.hands=[v(-.27,.65,.1),v(.27,.65,.1)];
  }else if(pose==='seatmarch'){p.feet.forEach((f,i)=>f[1]+=.17*a[i]);p.hands=[v(-.28,.60,0),v(.28,.60,0)];}
  else if(pose==='curls'){p.hands=p.hands.map((h,i)=>v(i?.26:-.26,.79-.27*Math.cos(pi*r),.27*Math.sin(pi*r)));p.elbowPole=[v(-.26,.78,-.2),v(.26,.78,-.2)];}
  else if(pose==='ankles'||pose==='legstretch'){const q=pose==='ankles'?1:ease(t/2);p.feet[1]=v(.14,.09+.40*q,.44+.28*q);p.footPitch[1]=pose==='ankles'?.5*Math.sin(t*pi/3):.35;p.hands=[v(-.27,.65,.1),v(.27,.65,.1)];}
@@ -78,6 +86,9 @@ export function sample(pose,t){
   }
  }
  p.phase=['hipstretch','legstretch'].includes(pose)&&t>=2?'Удержание растяжки':pose==='bed-quads'||pose==='bed-glutes'?(r>.7?'Мягкое напряжение':'Расслабление'):['squat','balance','bridge','birddog','hover'].includes(pose)&&r>.98?'Удержание':'Плавное движение';
+ if(pose==='seated-wrist-extension')p.phase=r>.7?'Кисти подняты':r<.2?'Кисти опущены':'Движение кистей';
+ if(pose==='seated-ankle-circles')p.phase=Math.floor(t/6)%2?'Круг в другую сторону':'Круг в одну сторону';
+ if(pose==='towel-toe-curls')p.phase=r>.7?'Пальцы собирают полотенце':r<.2?'Пальцы расслаблены':'Сгибание пальцев';
  return p;
 }
 

@@ -1,6 +1,6 @@
 import * as T from './vendor/three.module.js';
-import {muscleInfo} from './muscles.js?v=14';
-import {sample,supported} from './motion3d.js?v=14';
+import {muscleInfo} from './muscles.js?v=15';
+import {sample,supported} from './motion3d.js?v=15';
 const V=a=>new T.Vector3(...a),up=new T.Vector3(0,1,0);
 // Analytic two-bone IK: retain segment length and keep knees/elbows on their intended side.
 export function joint(a,b,pole,l1,l2){
@@ -59,7 +59,16 @@ class Trainer{
    const arm=i<2,colour=arm?'skin':'pants',w=arm?.052:.08;
    const group={upper:this.segmentMesh(colour),lower:this.segmentMesh(colour),joint:this.ellipsoid(this.body,[w,w,w],colour),start:this.ellipsoid(this.body,[w*1.2,w*1.2,w*1.2],arm?'shirt':colour),end:new T.Group(),arm,w};this.body.add(group.end);
    if(arm){group.sleeve=this.segmentMesh('shirt');this.ellipsoid(group.end,[.038,.062,.023],'skin',[0,-.015,0]);group.fingers=[];for(let f=0;f<4;f++)group.fingers.push(this.ellipsoid(group.end,[.007,.033,.008],'skin',[(f-1.5)*.016,-.073,0]));this.ellipsoid(group.end,[.012,.035,.012],'skin',[.036,-.023,.004]);}
-   else{this.ellipsoid(group.end,[.075,.049,.145],'shoe',[0,-.025,.06]);this.ellipsoid(group.end,[.076,.018,.148],'white',[0,-.064,.06]);for(let l=0;l<3;l++)this.ellipsoid(group.end,[.047,.005,.006],'white',[0,.015,.055+l*.023]);}
+   else{
+    group.shoe=new T.Group();group.end.add(group.shoe);
+    this.ellipsoid(group.shoe,[.075,.049,.145],'shoe',[0,-.025,.06]);this.ellipsoid(group.shoe,[.076,.018,.148],'white',[0,-.064,.06]);for(let l=0;l<3;l++)this.ellipsoid(group.shoe,[.047,.005,.006],'white',[0,.015,.055+l*.023]);
+    group.bareFoot=new T.Group();group.end.add(group.bareFoot);group.bareFoot.visible=false;
+    group.footSkin=this.ellipsoid(group.bareFoot,[.061,.040,.103],'skin',[0,-.027,.035]);group.footSkin.material=this.mat.skin.clone();
+    group.toes=[];for(let f=0;f<5;f++){
+     const pivot=new T.Group();pivot.position.set((f-2)*.023,-.031,.117);group.bareFoot.add(pivot);
+     const toe=this.ellipsoid(pivot,[.012-f*.001,.014,.035-f*.003],'skin',[0,0,.025-f*.002]);toe.material=group.footSkin.material;group.toes.push(pivot);
+    }
+   }
    group.surface=this.makeSurface(colour);group.upper.visible=false;group.lower.visible=false;group.joint.visible=false;group.start.scale.multiplyScalar(arm?.88:1.06);group.grip=arm?this.makeGrip():null;if(group.grip)this.body.add(group.grip);this.limbs.push(group);
   }
   this.musclePatches=[];this.createMusclePatches();
@@ -155,7 +164,21 @@ class Trainer{
  setProps(p){
   const key=p.prop+Boolean(p.roll);if(key===this.propKey)return;this.propKey=key;
   this.props.children.forEach(m=>{if(m.geometry!==this.cylinder&&m.geometry!==this.sphere)m.geometry.dispose();});this.props.clear();
-  if(p.prop==='chair'){this.box([.58,.07,.52],[0,.49,.02],'wood');this.box([.58,.42,.06],[0,.85,-.25],'wood');for(const x of [-.23,.23])for(const z of [-.2,.23])this.rod([x,0,z],[x,.49,z]);}
+  this.towel=null;
+  if(p.prop==='chair'||p.prop.startsWith('chair-')){this.box([.58,.07,.52],[0,.49,.02],'wood');this.box([.58,.42,.06],[0,.85,-.25],'wood');for(const x of [-.23,.23])for(const z of [-.2,.23])this.rod([x,0,z],[x,.49,z]);}
+  if(p.prop==='chair-table'){
+   this.box([.75,.04,.24],[0,.77,.28],'wood');
+   for(const x of [-.33,.33])for(const z of [.19,.37])this.rod([x,0,z],[x,.75,z],.018);
+  }
+  if(p.prop==='chair-footrest'){
+   const f=p.feet[1],top=f[1]-.09;
+   this.box([.25,.035,.27],[f[0],top-.018,f[2]-.04],'wood');
+   for(const dx of [-.09,.09])for(const dz of [-.14,.05])this.rod([f[0]+dx,0,f[2]+dz],[f[0]+dx,top,f[2]+dz],.018);
+  }
+  if(p.prop==='chair-towel'){
+   this.towel=this.box([.44,.006,.53],[0,.008,.58],'mat');
+   this.towel.userData.baseZ=.58;
+  }
   if(p.prop==='rail'){this.rod([-.65,1.1,.42],[.65,1.1,.42],.035);for(const x of [-.6,.6]){this.rod([x,0,.42],[x,1.1,.42]);this.rod([x,0,.22],[x,0,.62],.035);}}
   if(p.prop==='wall'||p.prop==='frontwall'){const z=p.prop==='wall'?-.19:.78;const wall=this.box([1.1,1.95,.055],[0,.975,z],'bed');wall.material=this.mat.bed.clone();wall.material.transparent=true;wall.material.opacity=.25;wall.material.depthWrite=false;}
   if(p.prop==='mat')this.box([1.15,.02,2.45],[0,.015,.2],'mat');
@@ -165,6 +188,7 @@ class Trainer{
  draw(pose,time){
   if(this.dead||!supported.includes(pose))return false;
   this.pose=pose;this.time=time;const p=sample(pose,time);this.phase=p.phase;this.muscleState=muscleInfo(pose,time,p);this.setProps(p);
+  if(this.towel){this.towel.scale.z=1-(p.towelPull||0)*3;this.towel.position.z=this.towel.userData.baseZ-(p.towelPull||0);this.towel.scale.y=1+(p.toeCurl||0)*2;}
   const lying=['supine','side'].includes(p.mode),prone=p.mode==='prone';
   const rootQ=new T.Quaternion();if(lying){rootQ.setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);if(p.mode==='side')rootQ.multiply(new T.Quaternion().setFromAxisAngle(up,-Math.PI/2));}
   const offset=lying?new T.Vector3(0,p.prop==='bed'?.60:p.mode==='side'?.24:.16,.15):new T.Vector3();
@@ -195,8 +219,13 @@ class Trainer{
    this.diagnostics.push({arm,error:result.error,upper:start.distanceTo(middle),lower:middle.distanceTo(end)});m.joints={start:start.clone(),middle:middle.clone(),end:end.clone(),front:front.clone(),side:side.clone()};
    this.updateSurface(m.surface,start,middle,end,m.arm,front,idx);this.segment(m.upper,start,middle,m.w*1.13);this.segment(m.lower,middle,end,m.w*.86);m.start.position.copy(start);m.joint.position.copy(middle);m.end.position.copy(end);
    m.upper.material=arm?this.mat.skin:this.mat.pants;
-   if(arm){m.end.visible=p.prop!=='rail';m.grip.visible=p.prop==='rail';if(m.grip.visible)m.grip.position.set(sign*.30,1.1,.42);this.segment(m.sleeve,start,start.clone().lerp(middle,.46),.074);m.end.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),end.clone().sub(middle).normalize());if(prone&&target.y<.03)m.end.quaternion.setFromEuler(new T.Euler(Math.PI/2,0,0));m.end.rotateX(p.wrist||0);m.fingers.forEach(f=>{f.rotation.x=-(p.finger||0)*1.3;f.position.z=(p.finger||0)*.02;});}
-   else{m.end.quaternion.copy(lying?rootQ:new T.Quaternion());m.end.rotateX(-(p.footPitch[idx]||0));}
+   if(arm){m.end.visible=p.prop!=='rail';m.grip.visible=p.prop==='rail';if(m.grip.visible)m.grip.position.set(sign*.30,1.1,.42);this.segment(m.sleeve,start,start.clone().lerp(middle,.46),.074);m.end.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),end.clone().sub(middle).normalize());if(prone&&target.y<.03)m.end.quaternion.setFromEuler(new T.Euler(Math.PI/2,0,0));m.end.rotateX((pose==='seated-wrist-extension'?-1:1)*(p.wrist||0));m.fingers.forEach(f=>{f.rotation.x=-(p.finger||0)*1.3;f.position.z=(p.finger||0)*.02;});}
+   else{
+    m.end.quaternion.copy(lying?rootQ:new T.Quaternion());m.end.rotateX(-(p.footPitch[idx]||0));m.end.rotateZ(p.footRoll?.[idx]||0);
+    m.shoe.visible=!p.bareFeet;m.bareFoot.visible=Boolean(p.bareFeet);
+    m.toes.forEach(toe=>toe.rotation.x=(p.toeCurl||0)*.9);
+    m.footSkin.material.color.copy(this.mat.skin.color);if(this.showMuscles!==false&&this.muscleState.selected.includes('feet'))m.footSkin.material.color.lerp(new T.Color(0xf18b59),.35+.35*(p.toeCurl||0));
+   }
   }
   this.updateMuscles(orient,hip,chest);
   this.body.updateMatrixWorld(true);

@@ -7,10 +7,28 @@ try{
  const context=await browser.newContext({viewport:{width:900,height:1100}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>window.WORKOUT_3D);
  assert.equal(await page.locator('[data-action="reminder"],[data-action="calendar"],[data-value="reminder-time"]').count(),0);
  const result=await page.evaluate(async()=>{
-  const {sample,supported}=await import('/motion3d.js?v=14'),trainer=window.WORKOUT_3D,render=trainer.renderer.render;trainer.renderer.render=()=>{};const failures=[];
+  const {sample,supported}=await import('/motion3d.js?v=15'),trainer=window.WORKOUT_3D,render=trainer.renderer.render;trainer.renderer.render=()=>{};const failures=[];
   for(const pose of supported)for(let t=0;t<12;t+=.25){trainer.draw(pose,t);if(trainer.diagnostics.some(d=>d.error>.006))failures.push({pose,t,type:'unreachable endpoint'});trainer.body.traverse(o=>{if(![...o.position,...o.quaternion,...o.scale].every(Number.isFinite))failures.push({pose,t,type:'invalid transform'});});const p=sample(pose,t);if(pose==='march'&&p.feet.every(f=>f[1]>.091))failures.push({pose,t,type:'both feet lifted'});}
   trainer.renderer.render=render;return {count:supported.length,failures};
- });assert.equal(result.count,45);assert.deepEqual(result.failures,[]);
+ });assert.equal(result.count,48);assert.deepEqual(result.failures,[]);
+ const additions=await page.evaluate(async()=>{
+  const {sample}=await import('/motion3d.js?v=15'),m=window.WORKOUT_3D,render=m.renderer.render;m.renderer.render=()=>{};
+  const result={};
+  const start=sample('seated-wrist-extension',0),lift=sample('seated-wrist-extension',2);
+  result.fixedForearms=JSON.stringify(start.hands)===JSON.stringify(lift.hands)&&start.wrist!==lift.wrist;
+  m.draw('seated-wrist-extension',0);const wrist0=m.limbs[1].end.quaternion.clone();
+  m.draw('seated-wrist-extension',2);result.wristMoves=wrist0.angleTo(m.limbs[1].end.quaternion)>.1;
+  const a=sample('seated-ankle-circles',0),b=sample('seated-ankle-circles',1.5);
+  result.fixedAnkle=JSON.stringify(a.feet)===JSON.stringify(b.feet)&&JSON.stringify(a.kneePole)===JSON.stringify(b.kneePole);
+  m.draw('seated-ankle-circles',0);const circle0=m.limbs[3].end.quaternion.clone();m.draw('seated-ankle-circles',1.5);result.ankleRotates=circle0.angleTo(m.limbs[3].end.quaternion)>.1;
+  result.twoAxes=a.footRoll[1]!==b.footRoll[1]&&a.footPitch[1]!==b.footPitch[1];
+  m.draw('towel-toe-curls',0);const heel=m.limbs[3].end.position.clone(),toe=m.limbs[3].toes[0].rotation.x,towel=m.towel.position.z;
+  m.draw('towel-toe-curls',2);result.toesMove=m.limbs[3].toes[0].rotation.x-toe>.3;result.heelFixed=heel.distanceTo(m.limbs[3].end.position)<1e-8;result.towelMoves=m.towel.position.z<towel;result.bareFoot=m.limbs[3].bareFoot.visible&&!m.limbs[3].shoe.visible;result.footMuscles=m.muscleState.selected.includes('feet');
+  m.showMuscles=false;m.draw('towel-toe-curls',2);result.hideFootMuscles=m.limbs[3].footSkin.material.color.equals(m.mat.skin.color);m.showMuscles=true;
+  m.draw('march',0);result.shoesRestored=m.limbs[3].shoe.visible&&!m.limbs[3].bareFoot.visible;
+  m.renderer.render=render;return result;
+ });for(const [key,ok] of Object.entries(additions))assert(ok,key);
+ console.log('PASS: supported wrist, fixed ankle with two-axis rotation, articulated bare toes, moving towel, foot muscle toggle and shoe restoration.');
  const anatomy=await page.evaluate(()=>{
   const m=window.WORKOUT_3D,results={minGripClearance:Infinity,minArmClearance:Infinity,alignment:1,raisedLeg:true};const render=m.renderer.render;m.renderer.render=()=>{};
   for(const pose of ['heels','balance','standside','standback','minisquat'])for(let t=0;t<12;t+=.5){m.draw(pose,t);for(const limb of m.limbs.slice(0,2)){limb.grip.traverse(mesh=>{if(!mesh.isMesh)return;const a=mesh.geometry.attributes.position;for(let i=0;i<a.count;i++){const y=a.getY(i)*mesh.scale.y+mesh.position.y,z=a.getZ(i)*mesh.scale.z+mesh.position.z;results.minGripClearance=Math.min(results.minGripClearance,Math.hypot(y,z)-.035);}});const a=limb.surface.geometry.attributes.position;for(let i=0;i<a.count;i++){results.minArmClearance=Math.min(results.minArmClearance,Math.hypot(a.getY(i)-1.1,a.getZ(i)-.42)-.035);}}}
@@ -23,9 +41,10 @@ try{
  await page.locator('[data-value="duration"]').fill('7');await page.locator('[data-action="apply-minutes"]').click();assert.equal(await page.locator('[data-value="timer"]').textContent(),'07:00');
  await page.locator('[data-view="side"]').click();assert.equal(await page.evaluate(()=>window.WORKOUT_3D.view),'side');
  await page.setViewportSize({width:375,height:850});await choose('bed-heelslide');assert(await page.locator('[data-value="three-stage"]').isVisible());assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ for(const pose of ['seated-wrist-extension','seated-ankle-circles','towel-toe-curls']){await choose(pose);assert(await page.locator('[data-value="three-stage"]').isVisible());assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  await page.locator('.movement-stage').screenshot({path:'/tmp/workout-3d-mobile.png'});
  await page.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}));});await context.setOffline(true);await page.reload();await page.waitForFunction(()=>window.WORKOUT_3D);assert(await page.locator('[data-value="three-stage"]').isVisible());await context.setOffline(false);
  const fallback=await browser.newContext();await fallback.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:original.call(this,type,...args);};});const f=await fallback.newPage();await f.goto(url);await f.waitForTimeout(300);assert(await f.locator('[data-value="movement"]').isVisible());assert(await f.locator('[data-value="three-stage"]').isHidden());assert.deepEqual(errors,[]);
- console.log('PASS: 45 3D motions × 48 phases, reachable limbs, finite transforms, grounded alternating steps, timer/pause/edit, camera buttons, mobile layout, offline reload, WebGL fallback, no reminders.');
+ console.log('PASS: 48 3D motions × 48 phases, reachable limbs, finite transforms, grounded alternating steps, timer/pause/edit, camera buttons, mobile layout, offline reload, WebGL fallback, no reminders.');
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
 

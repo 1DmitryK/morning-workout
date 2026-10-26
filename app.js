@@ -160,7 +160,7 @@
     drawPose(exercise.pose==='balance'?2:0);render();
   }
   const groups={personal:document.createElement('optgroup'),nhs:document.createElement('optgroup'),weight:document.createElement('optgroup'),cardio:document.createElement('optgroup'),bed:document.createElement('optgroup')};
-  groups.bed.label='В кровати · 10 упражнений';groups.cardio.label='Кардио сидя · 10 упражнений';groups.personal.label='Моя зарядка · 3 упражнения';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
+  groups.bed.label='В кровати · 10 упражнений';groups.cardio.label='Кардио сидя · 10 упражнений';groups.personal.label='Моя зарядка · 6 упражнений';groups.nhs.label='Памятка NHS · 12 упражнений';groups.weight.label='Контроль веса · 10 упражнений';
   for(const group of ['personal','nhs','weight','cardio','bed'])action('group-'+group).onclick=()=>selectExercise(exercises.findIndex(ex=>ex.group===group));
   exercises.forEach((exercise,index)=>{
     const option=document.createElement('option');option.value=String(index);

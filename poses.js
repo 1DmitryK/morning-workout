@@ -329,7 +329,47 @@ window.WORKOUT_POSES=(()=>{
   if(kind==='pumps')phase=r>.7?'Стопы от себя':r<.2?'Стопы на себя':'Движение стоп';
   return {svg,phase,detail};
  }
+ function personalFrame(kind,s){
+  const w=wave(s),r=w.rise,sh=[96,96],hip=[103,153];
+  let svg=ground()+chair()+body([sh,hip])+line([sh,[93,81]],ink,9)+head([93,64]);
+  svg+=line([hip,[139,164],[144,226]],ink,10,.4)+foot([144,226],[169,232],blue,.4);
+  let detail,caption;
+  if(kind==='wrist'){
+   svg+=path('M145 140H220M156 141V235M211 141V235',soft,4);
+   svg+=line([sh,[142,130],[211,130]],ink,9);
+   const hand=[211+28*Math.cos(.55*r),130-28*Math.sin(.55*r)];
+   svg+=line([[211,130],hand],skin,10)+line([hip,[174,165],[184,226]])+foot([184,226],[210,232]);
+   svg+=path('M224 36H335V109H224Z',floor,2)+path('M230 87H287V106',soft,3);
+   svg+=line([[237,78],[285,78]],skin,13);
+   svg+='<g transform="translate(285 78) rotate('+fmt(-32*r)+')">'+line([[0,0],[31,0]],skin,13)+line([[29,0],[41,0]],skin,5)+'</g>';
+   detail='Предплечье на столе · двигается только кисть';caption=r>.85?'Кисть поднята':r<.15?'Кисть опущена':w.cycle<.5?'Разгибание кисти':'Возвращение кисти';
+  }else if(kind==='circles'){
+   const direction=Math.floor(s/6)%2?-1:1,theta=direction*w.cycle*Math.PI*2;
+   svg+=line([hip,[173,157],[246,183]])+path('M229 197H273M235 197V235M267 197V235',soft,4);
+   svg+='<g transform="translate(246 183) rotate('+fmt(17*Math.sin(theta))+')">'+line([[0,0],[34,9+6*Math.cos(theta)]],blue,10)+'</g>';
+   svg+=line([sh,[120,132],[151,145]],ink,9);
+   svg+=path('M225 32H337V124H225Z',floor,2)+path('M253 78A26 22 0 1 1 307 78A26 22 0 1 1 253 78',soft,1.5,.45);
+   svg+=circle([280,78],4,soft)+line([[280,78],[280+29*Math.cos(theta),78+23*Math.sin(theta)]],skin,13);
+   detail='Голеностоп и колено неподвижны · стопа движется по кругу';caption=direction>0?'Круг в одну сторону':'Круг в другую сторону';
+  }else{
+   svg+=line([hip,[174,164],[184,220]])+line([sh,[120,132],[151,145]],ink,9);
+   svg+=solid('M174 234L'+fmt(223-10*r)+' 234L'+fmt(244-20*r)+' 230L307 230L307 237H174Z','#93c6cc');
+   svg+=line([[178,225],[202,225]],skin,12);
+   svg+=path('M224 36H337V121H224Z',floor,2)+solid('M231 111H330V117H231Z','#93c6cc');
+   svg+=line([[237,94],[284,97]],skin,18);
+   for(let i=0;i<4;i++){
+    const x=283+i*5,y=91+i*4;
+    svg+=path('M'+x+' '+y+'q'+fmt(16-7*r)+' '+fmt(-3+9*r)+' '+fmt(20-13*r)+' '+fmt(1+12*r),skin,4);
+   }
+   svg+=path('M287 113Q'+fmt(300-10*r)+' '+fmt(112-9*r)+' '+fmt(315-16*r)+' 113',soft,2);
+   detail='Босая стопа · пятка неподвижна · без груза';caption=r>.8?'Пальцы собирают полотенце':r<.2?'Пальцы расслаблены':'Плавное сгибание пальцев';
+  }
+  return {svg,phase:caption,detail};
+ }
  const all={
+  'seated-wrist-extension':s=>personalFrame('wrist',s),
+  'seated-ankle-circles':s=>personalFrame('circles',s),
+  'towel-toe-curls':s=>personalFrame('toes',s),
   'bed-pumps':s=>bedFrame('pumps',s),
   'bed-hands':s=>bedFrame('hands',s),
   'bed-wrists':s=>bedFrame('wrists',s),
