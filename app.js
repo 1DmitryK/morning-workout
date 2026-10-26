@@ -131,6 +131,8 @@
     const frame=window.WORKOUT_POSES.frame(exercise.pose,seconds);
     let rendered=false;
     if(window.WORKOUT_3D){try{value('three-stage').hidden=false;rendered=window.WORKOUT_3D.draw(exercise.pose,seconds);}catch(error){console.warn('3D draw failed',error);}}
+    value('muscle-panel').hidden=!rendered;
+    if(rendered)value('muscle-label').textContent=window.WORKOUT_3D.muscleState.text;
     value('three-stage').hidden=!rendered;value('view-controls').hidden=!rendered;
     value('movement').style.display=rendered?'none':'block';
     if(!rendered)value('movement-art').innerHTML=frame.svg;
@@ -178,6 +180,7 @@
     if(root.isConnected!==false)requestAnimationFrame(animate);
   }
   if(window.addEventListener)window.addEventListener('workout-3d-ready',()=>drawPose(animationSeconds));
+  action('muscles').onclick=()=>{if(!window.WORKOUT_3D)return;const model=window.WORKOUT_3D;model.showMuscles=model.showMuscles===false;action('muscles').setAttribute('aria-pressed',String(model.showMuscles));model.draw(model.pose,model.time);};
   const savedExercise=exercises.findIndex(ex=>ex.id===data.lastExercise);
   selectExercise(savedExercise>=0?savedExercise:exercises.findIndex(ex=>ex.id==='pelvic-tilt'));requestAnimationFrame(animate);
   showTime();render();
@@ -188,5 +191,6 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController&&!reloading){reloading=true;location.reload();}});
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
 }
+
 
 

@@ -1,11 +1,12 @@
 'use strict';
-const CACHE='workout-studio-v12';
-const ASSETS=['./','./index.html','./style.css?v=12','./exercises.js?v=12','./poses.js?v=12','./app.js?v=12','./trainer3d.js?v=12','./motion3d.js?v=12','./vendor/three.module.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
+const CACHE='workout-studio-v13';
+const ASSETS=['./','./index.html','./style.css?v=13','./exercises.js?v=13','./poses.js?v=13','./app.js?v=13','./trainer3d.js?v=13','./motion3d.js?v=13','./muscles.js?v=13','./vendor/three.module.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('workout-studio-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET'||new URL(event.request.url).origin!==self.location.origin)return;
  event.respondWith(fetch(event.request,{cache:'no-store'}).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}return response;}).catch(()=>caches.match(event.request).then(cached=>cached||(event.request.mode==='navigate'?caches.match(new URL('./',self.location.href).href):Response.error()))));
 });
+
 
 

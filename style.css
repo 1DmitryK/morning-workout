@@ -13,3 +13,6 @@
 
 
 .three-stage{width:100%;height:430px;max-width:640px;margin:auto}.three-stage canvas{display:block;width:100%;height:100%;border-radius:16px}.view-controls{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:4px 0 16px}.view-controls .btn{font-size:12px;padding:8px 12px;min-height:44px}@media(max-width:480px){.three-stage{height:350px}}
+
+
+.muscle-panel{max-width:520px;margin:12px auto 18px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--card);text-align:center}.muscle-panel p{margin-top:8px;font-size:13px}.muscle-panel .text-small{font-size:11px;line-height:1.5}

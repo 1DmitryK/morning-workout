@@ -12,7 +12,7 @@ export function sample(pose,t){
  if(!supported.includes(pose))throw Error('Unknown 3D motion '+pose);
  const r=pulse(t),a=alternate(t,3),s=Math.sin(t*pi/3),p={hip:v(0,.96,0),chest:v(0,1.43,0),feet:[v(-.13,.09,0),v(.13,.09,0)],hands:[v(-.27,.93,.05),v(.27,.93,.05)],kneePole:[v(-.13,.6,1),v(.13,.6,1)],elbowPole:[v(-1,1,.2),v(1,1,.2)],footPitch:[0,0],finger:0,wrist:0,prop:'none',mode:'standing',turn:0,headTilt:0,highlight:0};
  const seated=()=>{p.mode='seated';p.prop='chair';p.hip=v(0,.59,0);p.chest=v(0,1.07,0);p.feet=[v(-.14,.09,.44),v(.14,.09,.44)];p.hands=[v(-.28,.70,.25),v(.28,.70,.25)];p.kneePole=[v(-.15,.6,1),v(.15,.6,1)];};
- const support=()=>{p.prop='rail';p.hands=[v(-.30,1.1,.42),v(.30,1.1,.42)];};
+ const support=()=>{p.prop='rail';p.hands=[v(-.30,1.157,.36),v(.30,1.157,.36)];};
  if(pose.startsWith('cardio-')||['seatmarch','curls','ankles','hipstretch','legstretch','sitstand'].includes(pose))seated();
  if(pose.startsWith('cardio-')){
   const kind=pose.slice(7); const u=(1-Math.cos(t*pi/3))/2;
@@ -62,7 +62,7 @@ export function sample(pose,t){
    if(pose==='pelvic'){p.hip[2]=.013*r;p.highlight=r;}
    if(pose==='crunch'||pose==='rotation'){const q=pose==='crunch'?r:.65;p.chest[2]=.12*q;p.chest[1]-=.025*q;p.headTilt=-.12*q;p.hands=[v(-.20,.55,.15),v(.20,.55,.15)];if(pose==='rotation')p.twist=.18*s;}
   }else if(pose==='sideleg'){
-   p.mode='side';p.feet[0]=v(-.14,-.60,.40);p.feet[1]=v(.14+.34*r,-.85+.08*r,0);p.hands=[v(-.26,.60,.12),v(.24,.16,.22)];
+   p.mode='side';p.feet[0]=v(-.14,-.60,.40);p.feet[1]=v(.14+.34*r,-.85+.08*r,0);p.hands=[v(-.17,.64,.03),v(-.19,.25,.25)];
   }else{
    const kind=pose.slice(4),side=Math.floor(t/6)%2;
    if(kind==='pumps')p.footPitch=[.30*Math.sin(t*pi/3),.30*Math.sin(t*pi/3)];
@@ -80,3 +80,4 @@ export function sample(pose,t){
  p.phase=['hipstretch','legstretch'].includes(pose)&&t>=2?'Удержание растяжки':pose==='bed-quads'||pose==='bed-glutes'?(r>.7?'Мягкое напряжение':'Расслабление'):['squat','balance','bridge','birddog','hover'].includes(pose)&&r>.98?'Удержание':'Плавное движение';
  return p;
 }
+

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=12"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=13"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
 <div id="morning-workout-animated">
   <section data-screen="workout">
     <div class="viz-row" style="justify-content:space-between">
@@ -23,11 +23,12 @@
       <div class="movement-stage">
       <h3 data-value="exercise-name">Подъём на носки</h3>
       <div class="three-stage" data-value="three-stage" hidden></div>
-      <div class="view-controls" data-value="view-controls" hidden role="group" aria-label="Ракурс модели"><button class="btn" type="button" data-view="three" aria-pressed="true">Объёмный вид</button><button class="btn" type="button" data-view="front" aria-pressed="false">Спереди</button><button class="btn" type="button" data-view="side" aria-pressed="false">Сбоку</button></div>
+      <div class="view-controls" data-value="view-controls" hidden role="group" aria-label="Ракурс модели"><button class="btn" type="button" data-view="three" aria-pressed="true">Объёмный вид</button><button class="btn" type="button" data-view="front" aria-pressed="false">Спереди</button><button class="btn" type="button" data-view="side" aria-pressed="false">Сбоку</button><button class="btn" type="button" data-view="back" aria-pressed="false">Сзади</button></div>
       <svg data-value="movement" viewBox="0 0 360 260" role="img" aria-label="Нарисованная фигура показывает подъём пяток с опорой" style="width:100%;max-width:420px;display:block;margin:auto;color:var(--foreground)">
         <title data-value="movement-title">Подъём на носки</title>
         <g data-value="movement-art"></g>
       </svg>
+      <div class="muscle-panel" data-value="muscle-panel" hidden><button type="button" class="btn" data-action="muscles" aria-pressed="true">Подсветка мышц</button><p data-value="muscle-label"></p><p class="text-small">Оранжевый — основные работающие мышцы; голубой — растяжка. Схема показывает область, а не силу нагрузки. Глубокие мышцы отмечены в проекции на поверхность тела.</p><p class="text-small">Справочные материалы: <a href="https://www.nhs.uk/live-well/exercise/strength-exercises/" target="_blank" rel="noopener">NHS</a> · <a href="https://www.orthoinfo.org/recovery/hip-conditioning-program/" target="_blank" rel="noopener">AAOS: ноги</a> · <a href="https://www.orthoinfo.org/recovery/spine-conditioning-program/" target="_blank" rel="noopener">AAOS: корпус</a></p></div>
       <div class="text-center" data-value="movement-phase">Пятки опущены</div>
       <div class="text-small text-center" data-value="movement-detail">Две стопы на полу · показ с опорой</div>
       </div>
@@ -63,5 +64,6 @@
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=12"></script><script src="./poses.js?v=12"></script><script src="./app.js?v=12"></script><script type="module" src="./trainer3d.js?v=12"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=13"></script><script src="./poses.js?v=13"></script><script src="./app.js?v=13"></script><script type="module" src="./trainer3d.js?v=13"></script></body></html>
+
 
