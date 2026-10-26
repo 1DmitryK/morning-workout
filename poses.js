@@ -1,14 +1,58 @@
 'use strict';
-// Original schematic drawings. Coordinates describe motion, not prescribed range or tempo.
+// Original articulated human illustrations with clothing and skin. Coordinates describe motion, not prescribed range or tempo.
 window.WORKOUT_POSES=(()=>{
  const ink='var(--foreground)',blue='var(--viz-series-1)',soft='var(--muted-foreground)',floor='var(--border)';
  const fmt=n=>Math.round(n*100)/100;
  const pt=p=>fmt(p[0])+' '+fmt(p[1]);
  const path=(d,c=ink,w=11,opacity=1)=>'<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" opacity="'+opacity+'"/>';
- const line=(points,c=ink,w=11,o=1)=>path('M'+points.map(pt).join('L'),c,w,o);
  const circle=(p,r,c=ink,o=1)=>'<circle cx="'+fmt(p[0])+'" cy="'+fmt(p[1])+'" r="'+r+'" fill="'+c+'" opacity="'+o+'"/>';
- const head=(p,angle=0)=>circle(p,16)+circle([p[0]+9*Math.cos(angle),p[1]+9*Math.sin(angle)],2,'var(--background)');
- const body=(points)=>line(points,blue,24);
+ const skin='#e7b695',skinShadow='#c88e70',shirt='#4c70d8',trousers='#293d62',shoes='#eef2fa';
+ const solid=(d,c,o=1)=>'<path d="'+d+'" fill="'+c+'" opacity="'+o+'"/>';
+ function tapered(a,b,wa,wb,c){
+  const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,n=[-dy/len,dx/len];
+  return solid('M'+pt([a[0]+n[0]*wa,a[1]+n[1]*wa])+'L'+pt([b[0]+n[0]*wb,b[1]+n[1]*wb])+'Q'+pt([b[0]+dx/len*wb,b[1]+dy/len*wb])+' '+pt([b[0]-n[0]*wb,b[1]-n[1]*wb])+'L'+pt([a[0]-n[0]*wa,a[1]-n[1]*wa])+'Q'+pt([a[0]-dx/len*wa,a[1]-dy/len*wa])+' '+pt([a[0]+n[0]*wa,a[1]+n[1]*wa])+'Z',c);
+ }
+ function line(points,c=ink,w=11,o=1){
+  // Keep furniture, thin outlines and magnified finger diagrams as paths.
+  if((c===ink||c===blue)&&w>=8&&w<=11){
+   let art='';
+   if(c===blue&&points.length===3&&Math.hypot(points[2][0]-points[0][0],points[2][1]-points[0][1])<70){
+    art=path('M'+points.map(pt).join('L'),trousers,w+3)+path('M'+points.map(pt).join('L'),shoes,w-1);
+   }else if(points.length===2){
+    if(c===blue){
+     const [a,b]=points;
+     art=path('M'+pt(a)+'L'+pt(b),trousers,w+3)+path('M'+pt(a)+'L'+pt(b),shoes,w-1)+path('M'+pt([a[0],a[1]+4])+'L'+pt([b[0],b[1]+4]),'#b8c7de',2);
+    }else art=tapered(points[0],points[1],w*.56,w*.5,skin);
+   }else{
+    const arm=w<=9||(c===blue&&w===10),colour=arm?skin:trousers;
+    for(let i=0;i<points.length-1;i++)art+=tapered(points[i],points[i+1],arm?(i?5.5:7):(i?8:10),arm?(i?4:5.5):(i?5.5:8),colour);
+    if(arm){
+     const a=points[0],b=points[1],sleeve=[a[0]+(b[0]-a[0])*.42,a[1]+(b[1]-a[1])*.42];
+     art+=tapered(a,sleeve,8,7,shirt)+circle(points[points.length-1],5,skin);
+    }else art+=circle(points[1],7,trousers);
+   }
+   return '<g class="human-limb" data-joints="'+points.map(pt).join(';')+'" opacity="'+o+'">'+art+'</g>';
+  }
+  return path('M'+points.map(pt).join('L'),c,w,o);
+ }
+ const head=(p,angle=0)=>{
+  // Angle follows the original view: profile upright, face upwards when lying.
+  const a=angle*180/Math.PI;
+  return '<g class="human-head" transform="translate('+pt(p)+') rotate('+fmt(a)+')">'+
+   '<path d="M-8 -9Q-15 -3 -11 8Q-6 17 4 13L9 8L14 5L10 1Q11 -9 2 -13Z" fill="'+skin+'"/>'+
+   '<path d="M-11 3Q-18 -7 -7 -15Q4 -21 11 -10L8 -5Q3 -7 0 -6L-5 2Z" fill="#3d302c"/>'+
+   '<ellipse cx="-5" cy="3" rx="3" ry="4" fill="'+skinShadow+'"/>'+
+   '<circle cx="7" cy="-2" r="1.3" fill="#3c3736"/>'+
+   '<path d="M7 8L10 7" fill="none" stroke="#a86654" stroke-width="1.3" stroke-linecap="round"/></g>';
+ };
+ function body(points){
+  const a=points[0],b=points[points.length-1],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,n=[-dy/len,dx/len];
+  const off=(p,k)=>[p[0]+n[0]*k,p[1]+n[1]*k];
+  const middle=[a[0]+dx*.55,a[1]+dy*.55];
+  return '<g class="human-torso">'+solid('M'+pt(off(a,17))+'Q'+pt(off(middle,17))+' '+pt(off(b,12))+'L'+pt(off(b,-12))+'Q'+pt(off(middle,-17))+' '+pt(off(a,-17))+'Q'+pt([a[0]-dx/len*7,a[1]-dy/len*7])+' '+pt(off(a,17))+'Z',shirt)+
+   path('M'+pt(off(a,-11))+'Q'+pt(off(middle,-13))+' '+pt(off(b,-8)),'#7390e6',3,.8)+
+   tapered([b[0]-dx/len*4,b[1]-dy/len*4],b,12,12,trousers)+'</g>';
+ }
  const ground=()=>line([[28,235],[333,235]],floor,2);
  const chair=()=>path('M72 103V163H149M81 163V235M137 163V235',soft,4);
  const support=()=>path('M245 235V105H287V235M245 162H287',soft,4);
@@ -110,7 +154,7 @@ window.WORKOUT_POSES=(()=>{
   if(kind==='hover'){sh=[119,133-h];hip=[220,137-h];knee=[220,229-h];headP=[91,139-h];}
   if(kind==='cat'){
    const arch=(rise-.5)*50;
-   svg+=path('M119 133Q170 '+(132-arch)+' 220 137',blue,24);
+   svg+=path('M119 133Q170 '+(132-arch)+' 220 137',shirt,30);
    headP=[92,137+22*rise];
   }else svg+=body([sh,hip]);
   svg+=line([sh,[120,181],[121,225]],ink,10)+line([[115,228],[93,228]],blue,9);
@@ -180,7 +224,7 @@ window.WORKOUT_POSES=(()=>{
     shift=(leftX+rightX)/2-179;message=c<.5?'Шаг и приставить вправо':'Шаг и приставить влево';detail='Шаги небольшие · ноги не скрещиваются';
    }
    const sh=[179+shift,94],hip=[179+shift,151];
-   svg+=body([sh,hip])+line([sh,[179+shift,79]],ink,9)+head([179+shift,61],-Math.PI/2);
+   svg+=body([sh,hip])+line([sh,[179+shift,79]],ink,9)+head([179+shift,61]);
    if(kind==='standside'){svg+=support();rightX+=58*q;leftX-=58*l;leftY-=13*l;rightY-=13*q;}
    const height=kind==='kneelifts'?46:kind==='march'?20:0;
    if(height){leftY-=height*l;rightY-=height*q;}
@@ -206,7 +250,7 @@ window.WORKOUT_POSES=(()=>{
   const a=Math.sin(seconds*Math.PI/2),l=Math.max(0,a),r=Math.max(0,-a),u=(1-Math.cos(seconds*Math.PI/2))/2;
   const sh=[180,94],hip=[180,153];
   let svg=ground()+path('M139 107V169H221V107M147 169V233M213 169V233',soft,4);
-  svg+=body([sh,hip])+line([sh,[180,78]],ink,9)+head([180,60],-Math.PI/2);
+  svg+=body([sh,hip])+line([sh,[180,78]],ink,9)+head([180,60]);
   let knees=[[155,177],[205,177]],feet=[[155,225],[205,225]],hands=[[134,153],[226,153]],elbows=[[139,122],[221,122]];
   if(['march','tap','speedmarch'].includes(kind)){
    knees[0][1]-=22*l;feet[0][1]-=25*l;knees[1][1]-=22*r;feet[1][1]-=25*r;
@@ -335,4 +379,5 @@ window.WORKOUT_POSES=(()=>{
  };
  return Object.freeze({names:Object.freeze(Object.keys(all)),frame:(pose,seconds)=>{if(!all[pose])throw new Error('Unknown pose: '+pose);return all[pose](Math.max(0,seconds));}});
 })();
+
 

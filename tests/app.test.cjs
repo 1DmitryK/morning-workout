@@ -64,7 +64,7 @@ create({'morning-workout-studio-v1':'{invalid'});
 const ids=Array.from(read('index.html').matchAll(/data-(?:value|action)="([^"]+)"/g),m=>m[1]);
 for(const match of read('app.js').matchAll(/(?:value|action)\('([^']+)'\)/g))assert(ids.includes(match[1]),'missing element '+match[1]);
 assert(read('index.html').indexOf('poses.js')<read('index.html').indexOf('app.js'));
-for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=9'));assert(read('sw.js').includes('./'+name+'?v=9'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v9'));
+for(const name of ['style.css','exercises.js','poses.js','app.js']){assert(read('index.html').includes('./'+name+'?v=10'));assert(read('sw.js').includes('./'+name+'?v=10'));}assert(read('sw.js').includes("cache:'no-store'"));assert(read('sw.js').includes('workout-studio-v10'));
 
 for(const icon of JSON.parse(read('manifest.webmanifest')).icons)assert(fs.existsSync(path.join(rootDir,icon.src)));
 console.log('PASS: 45 distinct animations; all 12 NHS numbers/sources; static stretch holds; seconds fields; selector, timer, pause/reset, persistence, legacy migration, corrupt/blocked storage, reduced motion and offline asset list.');
@@ -93,3 +93,4 @@ const bed=ex.filter(e=>e.group==='bed');assert.equal(bed.length,10);assert.equal
 t.act('group-bed').onclick();assert.equal(t.val('bed-guidance').hidden,false);assert.equal(t.val('exercise-name').textContent,bed[0].name);
 t.act('group-cardio').onclick();assert.equal(t.val('bed-guidance').hidden,true);
 console.log('PASS: editable running/paused timers, presets, invalid input, no-op edit and bed navigation.');
+
