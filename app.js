@@ -9,7 +9,7 @@
   let activeExercise=0,animationSeconds=0,lastFrame=0;
   const weekdays=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
   const storageKey='morning-workout-studio-v1';
-  let data={days:{},reminder:'08:00',enabled:false},persist=true;
+  let data={days:{}},persist=true;
   try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(saved&&saved.days&&typeof saved.days==='object'&&!Array.isArray(saved.days))data={...data,...saved};localStorage.setItem(storageKey,JSON.stringify(data));}catch(e){persist=false;}
   let selected=new Date();selected.setHours(12,0,0,0);
   const dateKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -125,19 +125,16 @@
   action('stop').onclick=()=>{stop();left=0;showTime();timerUI('stopped','Занятие остановлено · «Старт» начнёт заново');};
   action('reset').onclick=resetTimer;
   timerUI('idle','Можно начинать');
-  if(!/^\d{2}:\d{2}$/.test(data.reminder))data.reminder='08:00';
-  value('reminder-time').value=data.reminder;
-  function reminderLabel(){action('reminder').textContent=data.enabled?'Выключить':'Включить';value('reminder-status').textContent=data.enabled?'На '+data.reminder+' — пока зарядка открыта. При закрытом чате уведомлений нет.':'Выключено';}
-  action('reminder').onclick=()=>{data.enabled=!data.enabled;save();reminderLabel();};
-  value('reminder-time').onchange=()=>{data.reminder=value('reminder-time').value||'08:00';save();reminderLabel();};
-  let lastReminder='';
-  setInterval(()=>{if(!data.enabled||screen('workout').hidden)return;const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');if(time===data.reminder&&lastReminder!==dateKey(now)){lastReminder=dateKey(now);value('reminder-status').textContent='Пора сделать утреннюю зарядку!';}},1000);
   const reducedMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function drawPose(seconds){
     const exercise=exercises[activeExercise];
     const frame=window.WORKOUT_POSES.frame(exercise.pose,seconds);
-    value('movement-art').innerHTML=frame.svg;
-    value('movement-phase').textContent=frame.phase;
+    let rendered=false;
+    if(window.WORKOUT_3D){try{value('three-stage').hidden=false;rendered=window.WORKOUT_3D.draw(exercise.pose,seconds);}catch(error){console.warn('3D draw failed',error);}}
+    value('three-stage').hidden=!rendered;value('view-controls').hidden=!rendered;
+    value('movement').style.display=rendered?'none':'block';
+    if(!rendered)value('movement-art').innerHTML=frame.svg;
+    value('movement-phase').textContent=rendered?window.WORKOUT_3D.phase:frame.phase;
     value('movement-detail').textContent=frame.detail;
   }
   function selectExercise(index){
@@ -180,22 +177,10 @@
     lastFrame=now;
     if(root.isConnected!==false)requestAnimationFrame(animate);
   }
+  if(window.addEventListener)window.addEventListener('workout-3d-ready',()=>drawPose(animationSeconds));
   const savedExercise=exercises.findIndex(ex=>ex.id===data.lastExercise);
   selectExercise(savedExercise>=0?savedExercise:exercises.findIndex(ex=>ex.id==='pelvic-tilt'));requestAnimationFrame(animate);
-  action('calendar').onclick=async()=>{
-    const when=new Date(),hm=(value('reminder-time').value||'08:00').split(':');when.setHours(Number(hm[0]),Number(hm[1]),0,0);
-    if(when.getTime()<Date.now())when.setDate(when.getDate()+1);
-    const pad=n=>String(n).padStart(2,'0'),stamp=when.getFullYear()+pad(when.getMonth()+1)+pad(when.getDate())+'T'+pad(when.getHours())+pad(when.getMinutes())+'00';
-    const page=new URL('./',location.href).href;
-    const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Workout Studio//RU','BEGIN:VEVENT','UID:workout-'+Date.now()+'@workout.local','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),'DTSTART:'+stamp,'DURATION:PT'+minutes+'M','RRULE:FREQ=DAILY','SUMMARY:Моя зарядка','URL:'+page,'BEGIN:VALARM','TRIGGER:PT0S','ACTION:DISPLAY','DESCRIPTION:Время зарядки','END:VALARM','END:VEVENT','END:VCALENDAR',''].join('\r\n');
-    try{
-      const file=new File([ics],'workout-reminder.ics',{type:'text/calendar'});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Ежедневная зарядка'});}
-      else{const link=document.createElement('a'),url=URL.createObjectURL(file);link.href=url;link.download=file.name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
-      value('reminder-status').textContent='Подтверди добавление события в календарь и проверь уведомление.';
-    }catch(error){if(error.name!=='AbortError')value('reminder-status').textContent='Создай ежедневное напоминание «Моя зарядка» на '+value('reminder-time').value+' в приложении «Напоминания».';}
-  };
-  reminderLabel();showTime();render();
+  showTime();render();
 })();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
@@ -203,4 +188,5 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController&&!reloading){reloading=true;location.reload();}});
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
 }
+
 

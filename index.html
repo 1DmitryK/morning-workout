@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=11"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2f5ce4"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Зарядка"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Личный дневник зарядки с анимациями упражнений, таймером и отметками подходов."><title>Моя зарядка</title><link rel="stylesheet" href="./style.css?v=12"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./assets/apple-touch-icon.png"><link rel="icon" href="./assets/icon-192.png"></head><body><main>
 <div id="morning-workout-animated">
   <section data-screen="workout">
     <div class="viz-row" style="justify-content:space-between">
@@ -22,6 +22,8 @@
       <div class="viz-row exercise-navigation"><button type="button" class="btn" data-action="previous">← Назад</button><span class="text-small" data-value="exercise-origin">NHS · 1 из 12</span><button type="button" class="btn" data-action="next">Далее →</button></div>
       <div class="movement-stage">
       <h3 data-value="exercise-name">Подъём на носки</h3>
+      <div class="three-stage" data-value="three-stage" hidden></div>
+      <div class="view-controls" data-value="view-controls" hidden role="group" aria-label="Ракурс модели"><button class="btn" type="button" data-view="three" aria-pressed="true">Объёмный вид</button><button class="btn" type="button" data-view="front" aria-pressed="false">Спереди</button><button class="btn" type="button" data-view="side" aria-pressed="false">Сбоку</button></div>
       <svg data-value="movement" viewBox="0 0 360 260" role="img" aria-label="Нарисованная фигура показывает подъём пяток с опорой" style="width:100%;max-width:420px;display:block;margin:auto;color:var(--foreground)">
         <title data-value="movement-title">Подъём на носки</title>
         <g data-value="movement-art"></g>
@@ -50,16 +52,7 @@
     <div data-value="exercises"></div>
     <p data-value="save-status" class="text-small" role="status"></p>
     </section>
-    <section class="paper reminder-save"><details>
-      <summary style="padding:12px 0">Напоминание</summary>
-      <div class="viz-controls">
-        <label class="form-label">Время <input type="time" class="form-control" data-value="reminder-time" value="08:00"></label>
-        <button type="button" class="btn" data-action="reminder">Включить</button>
-      </div>
-      <p data-value="reminder-status" class="text-small" role="status">Выключено</p>
-      <p class="text-small" id="reminderHelp">Показ напоминания работает при открытой странице. Для напоминания при закрытом приложении добавь ежедневное событие в календарь.</p>
-      <button type="button" class="btn" data-action="calendar">Добавить в календарь</button>
-    </details>
+    <section class="paper help-section">
     <details><summary>Как пользоваться и добавить на экран «Домой»</summary>
       <p>Выбери упражнение и нажми «Старт». Укажи от 1 до 180 минут. Кнопка «Старт» превращается в «Паузу», затем в «Продолжить». «Стоп» завершает занятие, «Сброс» возвращает выбранную длительность. Минуты доступны всегда: введи число, нажми «−» / «+» или выбери готовое время. Новая длительность останавливает отсчёт и ждёт кнопки «Старт». Отмечай подходы в дневнике самостоятельно: анимация не считает твои движения.</p>
       <p>В Safari: «Поделиться» → «На экран Домой» → «Открывать как веб-приложение», если переключатель показан → «Добавить».</p>
@@ -70,5 +63,5 @@
   </section>
 </div>
 
-<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=11"></script><script src="./poses.js?v=11"></script><script src="./app.js?v=11"></script></body></html>
+<noscript>Для анимации и дневника включи JavaScript в Safari.</noscript></main><script src="./exercises.js?v=12"></script><script src="./poses.js?v=12"></script><script src="./app.js?v=12"></script><script type="module" src="./trainer3d.js?v=12"></script></body></html>
 

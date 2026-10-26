@@ -1,0 +1,23 @@
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright':'playwright');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{let file=path.join(root,decodeURIComponent(req.url.split('?')[0]));if(file.endsWith('/'))file+='index.html';try{res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'application/json');res.end(fs.readFileSync(file));}catch{res.statusCode=404;res.end();}});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+try{
+ const context=await browser.newContext({viewport:{width:900,height:1100}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);await page.waitForFunction(()=>window.WORKOUT_3D);
+ assert.equal(await page.locator('[data-action="reminder"],[data-action="calendar"],[data-value="reminder-time"]').count(),0);
+ const result=await page.evaluate(async()=>{
+  const {sample,supported}=await import('/motion3d.js?v=12'),trainer=window.WORKOUT_3D,render=trainer.renderer.render;trainer.renderer.render=()=>{};const failures=[];
+  for(const pose of supported)for(let t=0;t<12;t+=.25){trainer.draw(pose,t);if(trainer.diagnostics.some(d=>d.error>.006))failures.push({pose,t,type:'unreachable endpoint'});trainer.body.traverse(o=>{if(![...o.position,...o.quaternion,...o.scale].every(Number.isFinite))failures.push({pose,t,type:'invalid transform'});});const p=sample(pose,t);if(pose==='march'&&p.feet.every(f=>f[1]>.091))failures.push({pose,t,type:'both feet lifted'});}
+  trainer.renderer.render=render;return {count:supported.length,failures};
+ });assert.equal(result.count,45);assert.deepEqual(result.failures,[]);
+ const choose=async pose=>{await page.evaluate(pose=>{const picker=document.querySelector('[data-value="exercise-picker"]');picker.value=window.WORKOUT_EXERCISES.findIndex(e=>e.pose===pose);picker.dispatchEvent(new Event('change'));},pose);};
+ await choose('standside');await page.locator('[data-action="start"]').click();await page.waitForTimeout(180);const time=await page.evaluate(()=>window.WORKOUT_3D.time);assert(time>0);await page.locator('[data-action="start"]').click();const paused=await page.evaluate(()=>window.WORKOUT_3D.time);await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>window.WORKOUT_3D.time),paused);
+ await page.locator('[data-value="duration"]').fill('7');await page.locator('[data-action="apply-minutes"]').click();assert.equal(await page.locator('[data-value="timer"]').textContent(),'07:00');
+ await page.locator('[data-view="side"]').click();assert.equal(await page.evaluate(()=>window.WORKOUT_3D.view),'side');
+ await page.setViewportSize({width:375,height:850});await choose('bed-heelslide');assert(await page.locator('[data-value="three-stage"]').isVisible());assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.locator('.movement-stage').screenshot({path:'/tmp/workout-3d-mobile.png'});
+ await page.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}));});await context.setOffline(true);await page.reload();await page.waitForFunction(()=>window.WORKOUT_3D);assert(await page.locator('[data-value="three-stage"]').isVisible());await context.setOffline(false);
+ const fallback=await browser.newContext();await fallback.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:original.call(this,type,...args);};});const f=await fallback.newPage();await f.goto(url);await f.waitForTimeout(300);assert(await f.locator('[data-value="movement"]').isVisible());assert(await f.locator('[data-value="three-stage"]').isHidden());assert.deepEqual(errors,[]);
+ console.log('PASS: 45 3D motions × 48 phases, reachable limbs, finite transforms, grounded alternating steps, timer/pause/edit, camera buttons, mobile layout, offline reload, WebGL fallback, no reminders.');
+}finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
