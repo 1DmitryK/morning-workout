@@ -135,7 +135,7 @@ class PulseHandler(SimpleHTTPRequestHandler):
             mode = incoming.get("mode", "literary")
             if language not in ("uk", "ru", "en"):
                 raise ValueError("Неверный язык")
-            if provider not in ("bionic", "ollama", "openai"):
+            if provider not in ("bionic", "ollama"):
                 raise ValueError("Неверный редактор")
             if mode not in ("faithful", "literary"):
                 raise ValueError("Неверный режим")
@@ -169,15 +169,8 @@ class PulseHandler(SimpleHTTPRequestHandler):
                         "LM Studio подключён, но не найдена Qwen 3.5 9B. "
                         "Загрузи её в LM Studio или укажи PULSE_BIONIC_MODEL."
                     )
-            elif provider == "ollama":
-                chosen = os.environ.get("PULSE_OLLAMA_MODEL", "qwen3:4b")
             else:
-                if not os.environ.get("OPENAI_API_KEY", "").strip():
-                    raise RuntimeError(
-                        "OpenAI API не подключён. Настрой OPENAI_API_KEY на Mac. "
-                        "Подписка ChatGPT не является ключом API."
-                    )
-                chosen = os.environ.get("PULSE_OPENAI_MODEL", "gpt-6.1-sol")
+                chosen = os.environ.get("PULSE_OLLAMA_MODEL", "qwen3:4b")
 
             set_status("Литературная редакция" if mode == "literary" else "Исправление",
                        1, f"Редактор: {provider}, модель: {chosen}")
@@ -240,33 +233,7 @@ class PulseHandler(SimpleHTTPRequestHandler):
                         "options": {"temperature": 0, "num_predict": 2200},
                     }
                     address = "http://127.0.0.1:11434/api/generate"
-                else:
-                    payload = {
-                        "model": chosen,
-                        "instructions": instruction,
-                        "input": user_text,
-                        "store": False,
-                        "text": {
-                            "format": {
-                                "type": "json_schema",
-                                "name": "edited_transcript",
-                                "strict": True,
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "items": {"type": "array", "items": {"type": "string"}}
-                                    },
-                                    "required": ["items"],
-                                    "additionalProperties": False,
-                                },
-                            },
-                        },
-                        "max_output_tokens": 2800,
-                    }
-                    address = "https://api.openai.com/v1/responses"
                 headers = {"Content-Type": "application/json"}
-                if provider == "openai":
-                    headers["Authorization"] = "Bearer " + os.environ["OPENAI_API_KEY"].strip()
                 request = urllib.request.Request(
                     address, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
                     headers=headers, method="POST"
@@ -285,18 +252,8 @@ class PulseHandler(SimpleHTTPRequestHandler):
                 try:
                     if provider == "bionic":
                         message = output["choices"][0]["message"]["content"]
-                    elif provider == "ollama":
-                        message = output["response"]
                     else:
-                        message = "".join(
-                            content.get("text", "")
-                            for item in output.get("output", [])
-                            if item.get("type") == "message"
-                            for content in item.get("content", [])
-                            if content.get("type") == "output_text"
-                        )
-                        if not message:
-                            raise ValueError("OpenAI вернул пустой или незавершённый ответ")
+                        message = output["response"]
                     parsed = json.loads(message)
                     suggestions = parsed["items"]
                     if not isinstance(suggestions, list) or len(suggestions) != len(batch):
