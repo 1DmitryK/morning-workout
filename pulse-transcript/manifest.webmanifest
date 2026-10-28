@@ -1,0 +1,19 @@
+{
+  "name": "Pulse Transcript",
+  "short_name": "Pulse",
+  "description": "Локальная транскрипция аудио и перевод",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090e18",
+  "theme_color": "#0b101b",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
