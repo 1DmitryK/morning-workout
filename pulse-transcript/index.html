@@ -146,6 +146,7 @@ el("repair").addEventListener("click",async()=>{
    const raw=await ffmpeg.readFile("fixed.wav");
    const wav=new File([new Uint8Array(raw)],original.name.replace(/\.[^.]+$/,"")+"-fixed.wav",{type:"audio/wav"});
    if(!wav.size||wav.size<1000)throw new Error("WAV оказался пустым.");
+   toggleRunning(false);
    filePicked(wav);
    status("Аудио преобразовано",100);
    message("WAV готов: "+(wav.size/1048576).toFixed(1)+" МБ. Теперь нажми «Начать транскрипцию». Полнота записи будет проверена снова.");
