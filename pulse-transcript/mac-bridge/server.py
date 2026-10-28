@@ -16,6 +16,8 @@ import subprocess
 import tempfile
 import threading
 import urllib.parse
+import urllib.request
+import urllib.error
 import wave
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -88,6 +90,8 @@ class PulseHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path, params = self.path_data()
+        if path == "/api/correct":
+            return self.correct_text(params)
         if path != "/api/transcribe":
             return self.json_reply(404, {"error": "Неизвестный запрос"})
         if not self.authorised(params):
@@ -110,6 +114,85 @@ class PulseHandler(SimpleHTTPRequestHandler):
             self.process(size, language, ext)
         except Exception as error:
             set_status("Ошибка обработки", 0, str(error), running=False)
+            return self.json_reply(500, {"error": str(error)})
+        finally:
+            JOB_LOCK.release()
+
+    def correct_text(self, params):
+        """Create a second, clearly marked text version; never overwrite originals."""
+        if not self.authorised(params):
+            return self.json_reply(403, {"error": "Неверный ключ Mac"})
+        if not JOB_LOCK.acquire(blocking=False):
+            return self.json_reply(409, {"error": "Mac обрабатывает другую задачу"})
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > 300_000:
+                raise ValueError("Слишком большой текст")
+            incoming = json.loads(self.rfile.read(length).decode("utf-8"))
+            items = incoming.get("texts", [])
+            language = incoming.get("language", "uk")
+            if language not in ("uk", "ru", "en"):
+                raise ValueError("Неизвестный язык текста")
+            if not isinstance(items, list) or not (1 <= len(items) <= 300):
+                raise ValueError("Нужен массив из 1–300 фрагментов")
+            if any(not isinstance(x, str) or len(x) > 1500 for x in items):
+                raise ValueError("Некорректная длина фрагмента")
+            set_status("Коррекция", 1, "Ollama исправляет копию текста")
+            fixed = []
+            for i in range(0, len(items), 4):
+                batch = items[i:i + 4]
+                if not any(x.strip() for x in batch):
+                    fixed.extend(batch)
+                    continue
+                label = {"uk": "українською", "ru": "на русском", "en": "in English"}[language]
+                prompt = (
+                    "Ти — обережний редактор транскрипцій. "
+                    "Виправляй ТІЛЬКИ очевидні помилки розпізнавання, "
+                    "орфографію, пунктуацію й граматичні помилки. "
+                    "НЕ перекладай, НЕ переказуй, НЕ додавай і НЕ викидай зміст. "
+                    "Не вгадуй біблійні цитати замість почутих слів. "
+                    "Сумнівні слова залиш без змін. "
+                    "Контекст: біблійна промова, Єгова, Ісус Христос, Прислів’я, "
+                    "Об’явлення, районний конгрес. "
+                    f"Мова тексту: {label}. "
+                    "Поверни ЛИШЕ JSON об'єкт з полем items — масивом "
+                    f"із {len(batch)} виправлених рядків у тому ж порядку. "
+                    "Вхідні фрагменти: " + json.dumps(batch, ensure_ascii=False)
+                )
+                request_data = json.dumps({
+                    "model": "qwen3:4b", "prompt": prompt, "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0, "num_predict": 1500},
+                }, ensure_ascii=False).encode("utf-8")
+                request = urllib.request.Request(
+                    "http://127.0.0.1:11434/api/generate",
+                    data=request_data,
+                    headers={"Content-Type": "application/json"}, method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=300) as response:
+                        output = json.load(response)
+                except (urllib.error.URLError, TimeoutError) as error:
+                    raise RuntimeError(
+                        "Ollama недоступна. Установи Ollama и выполни: "
+                        "ollama pull qwen3:4b. " + str(error)
+                    ) from error
+                try:
+                    decoded = json.loads(output["response"])
+                    proposals = decoded["items"]
+                    if not isinstance(proposals, list) or len(proposals) != len(batch):
+                        raise ValueError("wrong number of items")
+                    if any(not isinstance(x, str) or len(x) > 2500 for x in proposals):
+                        raise ValueError("invalid text returned")
+                except (KeyError, ValueError, TypeError) as error:
+                    raise RuntimeError("Ollama вернула некорректный формат текста") from error
+                fixed.extend(proposals)
+                set_status("Коррекция текста", int(100 * len(fixed) / len(items)),
+                           f"Исправлено {len(fixed)} из {len(items)} фрагментов")
+            set_status("Исправленная копия готова", 100, running=False)
+            return self.json_reply(200, {"corrected": fixed})
+        except Exception as error:
+            set_status("Ошибка коррекции", 0, str(error), running=False)
             return self.json_reply(500, {"error": str(error)})
         finally:
             JOB_LOCK.release()
