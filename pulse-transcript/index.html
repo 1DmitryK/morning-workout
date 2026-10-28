@@ -27,7 +27,7 @@
 <h2>Новая транскрипция</h2>
 <div class="drop" id="drop" tabindex="0" role="button" aria-label="Выбрать аудиофайл"><span class="big">♫</span><strong>Выбрать или перетащить аудио</strong><small>M4A · MP3 · WAV · AAC · OGG (зависит от браузера)</small></div>
 <input type="file" id="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.mp4" class="hidden">
-<div id="fileinfo" class="fileinfo" aria-live="polite"></div>
+<div id="fileinfo" class="fileinfo" aria-live="polite"></div><div class="controls" style="margin-top:8px"><button class="secondary" id="repair" disabled hidden>♫ Исправить аудио (WAV)</button></div>
 <audio id="player" controls hidden preload="metadata"></audio>
 <div class="settings">
 <label class="field">Язык записи<select id="language"><option value="auto">Определить автоматически</option><option value="en">Английский</option><option value="ru">Русский</option><option value="uk">Украинский</option></select></label>
@@ -60,12 +60,12 @@
 <script type="module">
 const el = (id) => document.getElementById(id);
 const state = { file:null, url:null, chunks:[], transcribed:false, translated:false, view:"text", running:false, stop:false, name:"Транскрипция", source:"auto" };
-const modelCache = new Map();
+const modelCache = new Map();let verifiedAudio = null;
 let pipelineLib = null;
 const storageKey = "pulse-transcript-v01";
 function status(text, pct){el("progress").hidden=false;el("stage").textContent=text; const p=Math.max(0,Math.min(100,Math.round(pct||0)));el("percent").textContent=p+"%";el("fill").style.width=p+"%";}
 function message(str, isError=false){el("progress").hidden=false;el("msg").textContent=str;el("msg").className="msg"+(isError?" warning":"");}
-function buttons(){el("start").disabled=!state.file||state.running;el("cancel").disabled=!state.running;el("translate").disabled=state.running||!state.transcribed;el("clear").disabled=state.running;}
+function buttons(){el("repair").disabled=!state.file||state.running;el("start").disabled=!state.file||state.running;el("cancel").disabled=!state.running;el("translate").disabled=state.running||!state.transcribed;el("clear").disabled=state.running;}
 function isVideoFile(file){return /\.(mp4|m4v|mov|webm)$/i.test(file?.name||"") || /^video\//.test(file?.type||"");}
 async function playerDuration(){
  const player=el("player");
@@ -79,7 +79,7 @@ async function playerDuration(){
   player.addEventListener("error",done,{once:true});
  });
 }
-function filePicked(file){if(!file)return; if(state.running){message("Останови текущую обработку прежде чем менять файл.",true);return;}if(state.url)URL.revokeObjectURL(state.url);state.file=file;state.url=URL.createObjectURL(file);el("player").src=state.url;el("player").hidden=false;el("fileinfo").textContent=file.name+" · "+(file.size/1048576).toFixed(1)+" МБ"; if(isVideoFile(file)){status("Видеофайл MP4/MOV",0);message("Видеофайлы иногда декодируются в Safari не полностью. Перед началом приложение сверит длительность звука с длительностью файла. Если есть расхождение, извлеки аудио в M4A.",false);}buttons();}
+function filePicked(file){if(!file)return; if(state.running){message("Останови текущую обработку прежде чем менять файл.",true);return;}if(state.url)URL.revokeObjectURL(state.url);state.file=file;verifiedAudio=null;el("repair").hidden=false;state.url=URL.createObjectURL(file);el("player").src=state.url;el("player").hidden=false;el("fileinfo").textContent=file.name+" · "+(file.size/1048576).toFixed(1)+" МБ"; if(isVideoFile(file)){status("Видеофайл MP4/MOV",0);message("Видеофайлы иногда декодируются в Safari не полностью. Перед началом приложение сверит длительность звука с длительностью файла. Если есть расхождение, извлеки аудио в M4A.",false);}buttons();}
 el("drop").addEventListener("click",()=>el("file").click());el("drop").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();el("file").click();}});
 el("file").addEventListener("change",e=>filePicked(e.target.files[0]));
 for(const ev of ["dragover","dragenter"])el("drop").addEventListener(ev,e=>{e.preventDefault();el("drop").classList.add("drag");});
@@ -111,11 +111,57 @@ async function getAsr(){const model="onnx-community/whisper-"+el("model").value;
 async function getTranslator(target){const key="translation:"+target;if(modelCache.has(key))return modelCache.get(key);const model=target==="ru"?"Xenova/opus-mt-en-ru":"Xenova/opus-mt-en-uk";status("Загрузка модели перевода",88);message("Модель перевода загружается впервые. Для длинного текста перевод может занимать время.");const fn=await lib();const tr=await fn("translation",model,{device:"wasm",dtype:"q8"});modelCache.set(key,tr);return tr;}
 function isQuiet(samples){let energy=0;for(let i=0;i<samples.length;i+=8)energy+=samples[i]*samples[i];return Math.sqrt(energy/Math.ceil(samples.length/8))<0.002;}function isLooping(text){const words=String(text).toLowerCase().split(/\s+/).filter(Boolean);if(words.length<15)return false;const freq=new Map();for(let i=0;i+2<words.length;i++){const k=words.slice(i,i+3).join(" ");freq.set(k,(freq.get(k)||0)+1);}return Math.max(0,...freq.values())>=5;}function convertSegment(buffer,begin,end){const sr=buffer.sampleRate,channels=[];for(let i=0;i<buffer.numberOfChannels;i++)channels.push(buffer.getChannelData(i));const count=Math.max(1,Math.ceil((end-begin)*16000)),out=new Float32Array(count);for(let i=0;i<count;i++){const at=(begin+i/16000)*sr;const p=Math.min(channels[0].length-1,Math.floor(at));const next=Math.min(channels[0].length-1,p+1);const frac=at-p;let v=0;for(const ch of channels)v+=ch[p]*(1-frac)+ch[next]*frac;out[i]=v/channels.length;}return out;}
 async function doTranslation(){const target=el("target").value;if(target==="none")return;if(state.source!=="en"){message("Перевод работает для английской речи. Для нового файла выбери язык «Английский».",true);return;}const tr=await getTranslator(target);for(let i=0;i<state.chunks.length;i++){if(state.stop)break;const source=state.chunks[i].text.trim();status("Перевод текста",88+12*i/Math.max(1,state.chunks.length));message("Фрагмент "+(i+1)+" из "+state.chunks.length);if(!source){state.chunks[i].translation="";continue;}const res=await tr(source,{max_new_tokens:256});state.chunks[i].translation=String(res[0]?.translation_text||res[0]?.generated_text||"");save();}state.translated=state.chunks.some(c=>c.translation);if(state.translated)state.view="translation";save();render();}
+
+el("repair").addEventListener("click",async()=>{
+ if(!state.file||state.running)return;
+ const original=state.file;
+ toggleRunning(true);
+ status("Подготовка восстановления",0);
+ message("Преобразую звук в WAV 16 кГц на устройстве. Это может занять несколько минут и потребовать дополнительной памяти.");
+ let ffmpeg;
+ try{
+   const [m,u]=await Promise.all([
+     import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),
+     import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js")
+   ]);
+   ffmpeg=new m.FFmpeg();
+   const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+   ffmpeg.on("progress",({progress})=>{
+     if(Number.isFinite(progress)){
+       status("Восстановление аудио",Math.min(95,Math.max(0,Math.round(progress*95))));
+       message("Конвертация в WAV — "+Math.round(progress*100)+"%. Не закрывай приложение.");
+     }
+   });
+   status("Загрузка FFmpeg",1);
+   await ffmpeg.load({
+     classWorkerURL:await u.toBlobURL("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js","text/javascript"),
+     coreURL:await u.toBlobURL(base+"/ffmpeg-core.js","text/javascript"),
+     wasmURL:await u.toBlobURL(base+"/ffmpeg-core.wasm","application/wasm")
+   });
+   const extension=(original.name.split(".").pop()||"m4a").replace(/[^a-z0-9]/gi,"").slice(0,8);
+   const source="input."+extension;
+   await ffmpeg.writeFile(source,await u.fetchFile(original));
+   const rc=await ffmpeg.exec(["-i",source,"-vn","-ar","16000","-ac","1","-c:a","pcm_s16le","fixed.wav"]);
+   if(rc!==0)throw new Error("FFmpeg не смог прочитать аудиодорожку (код "+rc+").");
+   const raw=await ffmpeg.readFile("fixed.wav");
+   const wav=new File([new Uint8Array(raw)],original.name.replace(/\.[^.]+$/,"")+"-fixed.wav",{type:"audio/wav"});
+   if(!wav.size||wav.size<1000)throw new Error("WAV оказался пустым.");
+   filePicked(wav);
+   status("Аудио преобразовано",100);
+   message("WAV готов: "+(wav.size/1048576).toFixed(1)+" МБ. Теперь нажми «Начать транскрипцию». Полнота записи будет проверена снова.");
+ }catch(error){
+   status("Не удалось преобразовать",0);
+   message("Конвертация не завершилась: "+(error?.message||error)+". На iPad могла закончиться память. Попробуй на Mac через QuickTime → Export As → Audio Only; исходный файл не изменён.",true);
+ }finally{
+   if(ffmpeg)try{ffmpeg.terminate();}catch(e){}
+   toggleRunning(false);
+ }
+});
 el("start").addEventListener("click",async()=>{if(!state.file||state.running)return;const target=el("target").value,lang=el("language").value;if(target!=="none"&&lang!=="en"){message("Чтобы перевести на русский или украинский, выбери язык записи «Английский».",true);return;}toggleRunning(true);state.stop=false;status("Проверка аудио",0);message("Сравниваю длительность записи и доступного для распознавания звука…");try{status("Чтение аудиофайла",10);message("Декодирую аудио. Длинные записи могут потребовать много оперативной памяти.");const ctx=new (window.AudioContext||window.webkitAudioContext)();let audio;try{const bytes=await state.file.arrayBuffer();audio=await ctx.decodeAudioData(bytes);}finally{await ctx.close();}const duration=audio.duration;
 const displayed=await playerDuration();
-if(displayed && Math.abs(displayed-duration)>Math.max(3,displayed*.015)){
+if(displayed && Math.abs(displayed-duration)>Math.max(3,displayed*.015)){el("repair").hidden=false;
  const missing=Math.max(0,displayed-duration);
- throw new Error("НЕПОЛНЫЙ АУДИОПОТОК: плеер показывает "+time(displayed)+", но браузер смог декодировать только "+time(duration)+(missing>0?" (не хватает "+time(missing)+")":"")+". Нельзя считать это полной транскрипцией. На Mac: открой MP4 в QuickTime Player → Файл → Экспортировать как → Только аудио (Audio Only). Сохрани M4A и загрузи его сюда. Исходный текст сохранён.");
+ throw new Error("НЕПОЛНЫЙ АУДИОПОТОК: плеер показывает "+time(displayed)+", но браузер смог декодировать только "+time(duration)+(missing>0?" (не хватает "+time(missing)+")":"")+". Нельзя считать это полной транскрипцией. Нажми «Исправить аудио (WAV)» или на Mac: открой MP4 в QuickTime Player → Файл → Экспортировать как → Только аудио (Audio Only). Сохрани M4A и загрузи его сюда. Исходный текст сохранён.");
 }
 if(state.stop)throw new Error("Остановлено");
 state.source=lang;state.chunks=[];state.transcribed=false;state.translated=false;state.view="text";state.name=state.file.name;render();
