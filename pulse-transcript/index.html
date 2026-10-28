@@ -54,7 +54,7 @@
 <button class="secondary" id="correct" hidden disabled>✎ Исправить на Mac</button><button class="secondary" id="translate">⇄ Перевести текст</button>
 </div>
 <div id="editorSettings" hidden style="margin-top:12px">
- <div class="settings"><label class="field">Локальная модель<select id="editorProvider"><option value="bionic">Bionic · Qwen 3.5 9B (LM Studio)</option><option value="ollama">Ollama · локальная Qwen</option></select></label><label class="field">Редакция<select id="editorMode"><option value="literary">Литературная, без изменения смысла</option><option value="faithful">Минимальные исправления</option></select></label></div>
+ <div class="settings"><label class="field">Локальная модель<select id="editorProvider"><option value="bionic">Bionic · Qwen 3.5 9B (LM Studio)</option><option value="ollama">Ollama · локальная Qwen</option><option value="openai">OpenAI API · облачная редакция (платно)</option></select></label><label class="field">Редакция<select id="editorMode"><option value="literary">Литературная, без изменения смысла</option><option value="faithful">Минимальные исправления</option></select></label></div>
 </div>
 <div id="importArea" hidden style="margin-top:12px">
  <label class="field">Исправленный ответ из ChatGPT<textarea id="importText" rows="5" style="width:100%;min-height:100px;background:#0d1623;color:#f4f7fa;border:1px solid #304154;border-radius:12px;padding:12px" placeholder="Вставь сюда полный ответ ChatGPT с метками [[0001]], [[0002]]…"></textarea></label>
@@ -298,6 +298,7 @@ async function runCorrection(){
  if(!macBridgeReady||state.running||!state.transcribed)return;
  const token=new URLSearchParams(location.search).get("token");
  if(!token){message("Открой личный адрес Mac с ключом token.",true);return;}
+ if(el("editorProvider").value==="openai"&&!confirm("Отправить текст транскрипции через OpenAI API? Это платный облачный запрос. Исходное аудио не отправляется; только текст. Продолжить?"))return;
  if(!["uk","ru","en"].includes(state.source)){message("Перед коррекцией выбери исходный язык в настройках, а не автоопределение.",true);return;}
  state.macRunning=true;toggleRunning(true);
  status("Коррекция на Mac",1);
