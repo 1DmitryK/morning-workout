@@ -122,6 +122,7 @@ async function bounded(promise,ms,step){
 el("repair").addEventListener("click",async()=>{
  if(!state.file||state.running)return;
  const original=state.file;
+ state.stop=false;
  toggleRunning(true);
  status("Подготовка FFmpeg",1);
  message("Загружаю конвертер. Для первого запуска нужен интернет.");
@@ -133,7 +134,7 @@ el("repair").addEventListener("click",async()=>{
    ]),90000,"Загрузка модулей FFmpeg");
    if(state.stop)throw new Error("Отменено.");
    ffmpeg=new m.FFmpeg();
-   const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+   const base="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
    status("Загрузка JavaScript-ядра",10);
    message("Скачиваю файлы FFmpeg с сервера.");
    coreBlobURL=await bounded(u.toBlobURL(base+"/ffmpeg-core.js","text/javascript"),90000,"Загрузка ffmpeg-core.js");
