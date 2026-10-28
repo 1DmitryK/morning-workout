@@ -97,13 +97,13 @@ function baseName(){return(state.name||"transcript").replace(/\.[^.]+$/,"").repl
 function textBlob(t,mime){return new Blob(["\ufeff",t],{type:mime||"text/plain;charset=utf-8"});}
 function srtString(){return state.chunks.map((c,i)=>{const fmt=n=>time(n).replace(".",",")+",000";return (i+1)+"\n"+fmt(c.start)+" --> "+fmt(c.end)+"\n"+lineText(c).trim()+"\n";}).join("\n");}
 function xmlEscape(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");}
-function docxXml(){const par=(text)=>"<w:p><w:r><w:t xml:space=\"preserve\">"+xmlEscape(text)+"</w:t></w:r></w:p>";return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+par(state.name)+state.chunks.map(c=>par("["+time(c.start)+"] "+(state.view==="translation"?c.translation:c.text))).join("")+"<w:sectPr/></w:body></w:document>";}
+function docxXml(){const par=(text)=>"<w:p><w:r><w:t xml:space=\"preserve\">"+xmlEscape(text)+"</w:t></w:r></w:p>";return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+par(state.name)+state.chunks.map(c=>par("["+time(c.start)+"] "+lineText(c))).join("")+"<w:sectPr/></w:body></w:document>";}
 async function saveDocx(){try{const mod=await import("https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js");const enc=new TextEncoder();const files={"[Content_Types].xml":enc.encode('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'),"_rels/.rels":enc.encode('<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'),"word/document.xml":enc.encode(docxXml())};download(baseName()+(state.view==="translation"?"-перевод":state.view==="corrected"?"-исправлено":"")+".docx",new Blob([mod.zipSync(files)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));}catch(err){message("Не удалось создать DOCX: "+err.message+". Можно сохранить TXT.",true);}}
 el("taboriginal").addEventListener("click",()=>{state.view="text";render();});el("tabtranslated").addEventListener("click",()=>{if(state.translated){state.view="translation";render();}});
 el("tabcorrected").addEventListener("click",()=>{if(state.chunks.some(c=>c.corrected)){state.view="corrected";render();}});
 el("copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(plain());message("Текст скопирован.");}catch(e){message("Не удалось скопировать. Выбери и скопируй текст вручную.",true);}});
-el("txt").addEventListener("click",()=>download(baseName()+(state.view==="translation"?"-перевод":"")+".txt",textBlob(plain())));
-el("srt").addEventListener("click",()=>download(baseName()+(state.view==="translation"?"-перевод":"")+".srt",textBlob(srtString())));
+el("txt").addEventListener("click",()=>download(baseName()+(state.view==="translation"?"-перевод":state.view==="corrected"?"-исправлено":"")+".txt",textBlob(plain())));
+el("srt").addEventListener("click",()=>download(baseName()+(state.view==="translation"?"-перевод":state.view==="corrected"?"-исправлено":"")+".srt",textBlob(srtString())));
 el("docx").addEventListener("click",saveDocx);
 el("clear").addEventListener("click",()=>{if(!confirm("Удалить сохранённый текст транскрипции?"))return;localStorage.removeItem(storageKey);state.chunks=[];state.transcribed=false;state.translated=false;state.view="text";render();});
 el("cancel").addEventListener("click",()=>{state.stop=true;message("Остановка после текущего фрагмента…");});
@@ -262,12 +262,15 @@ async function runMacTranscription(){
   const payload=await response.json();
   if(!response.ok)throw new Error(payload.error||"Ошибка Mac-движка");
   if(!Array.isArray(payload.chunks)||!payload.chunks.length)throw new Error("Mac не вернул текст");
+  const expectedDuration=await playerDuration();
+  if(expectedDuration&&Math.abs(expectedDuration-Number(payload.duration))>Math.max(3,expectedDuration*.015))
+    throw new Error("Mac обработал "+time(payload.duration)+", но исходный файл длится "+time(expectedDuration)+". Транскрипцию нельзя считать полной.");
   // The previous transcript remains intact until the new complete result arrives.
   state.chunks=payload.chunks.map(c=>({
    start:Number(c.start)||0,end:Number(c.end)||0,text:String(c.text||""),
    raw:String(c.raw??c.text??""),warning:!!c.warning,corrected:"",translation:""
   }));
-  state.name=state.file.name;state.source=language;state.view="text";
+  state.name=state.file.name;state.source=language==="auto"?(["uk","ru","en"].includes(payload.language)?payload.language:"auto"):language;state.view="text";
   state.transcribed=true;state.translated=false;save();render();
   status("Распознавание завершено",100);
   message("Mac обработал запись длительностью "+time(payload.duration)+". Проверь текст и сохрани.");
@@ -285,6 +288,7 @@ async function runCorrection(){
  if(!macBridgeReady||state.running||!state.transcribed)return;
  const token=new URLSearchParams(location.search).get("token");
  if(!token){message("Открой личный адрес Mac с ключом token.",true);return;}
+ if(!["uk","ru","en"].includes(state.source)){message("Перед коррекцией выбери исходный язык в настройках, а не автоопределение.",true);return;}
  state.macRunning=true;toggleRunning(true);
  status("Коррекция на Mac",1);
  message("Локальная Ollama создаёт отдельный черновик. Оригинал остаётся без изменений.");
