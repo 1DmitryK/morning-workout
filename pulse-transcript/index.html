@@ -59,13 +59,13 @@
 </div>
 <script type="module">
 const el = (id) => document.getElementById(id);
-const state = { file:null, url:null, chunks:[], transcribed:false, translated:false, view:"text", running:false, stop:false, name:"Транскрипция", source:"auto" };
+const state = { file:null, url:null, chunks:[], transcribed:false, translated:false, view:"text", running:false, macRunning:false, stop:false, name:"Транскрипция", source:"auto" };
 const modelCache = new Map();let verifiedAudio = null;
 let pipelineLib = null;
 const storageKey = "pulse-transcript-v01";
 function status(text, pct){el("progress").hidden=false;el("stage").textContent=text; const p=Math.max(0,Math.min(100,Math.round(pct||0)));el("percent").textContent=p+"%";el("fill").style.width=p+"%";}
 function message(str, isError=false){el("progress").hidden=false;el("msg").textContent=str;el("msg").className="msg"+(isError?" warning":"");}
-function buttons(){el("repair").disabled=!state.file||state.running;el("start").disabled=!state.file||state.running;el("cancel").disabled=!state.running;el("translate").disabled=state.running||!state.transcribed;el("clear").disabled=state.running;}
+function buttons(){el("repair").disabled=!state.file||state.running;el("start").disabled=!state.file||state.running;el("cancel").disabled=!state.running||state.macRunning;el("translate").disabled=state.running||!state.transcribed;el("clear").disabled=state.running;}
 function isVideoFile(file){return /\.(mp4|m4v|mov|webm)$/i.test(file?.name||"") || /^video\//.test(file?.type||"");}
 async function playerDuration(){
  const player=el("player");
@@ -208,7 +208,77 @@ el("repair").addEventListener("click",async()=>{
    toggleRunning(false);
  }
 });
-el("start").addEventListener("click",async()=>{if(!state.file||state.running)return;const target=el("target").value,lang=el("language").value;if(target!=="none"&&lang!=="en"){message("Чтобы перевести на русский или украинский, выбери язык записи «Английский».",true);return;}toggleRunning(true);state.stop=false;status("Проверка аудио",0);message("Сравниваю длительность записи и доступного для распознавания звука…");try{status("Чтение аудиофайла",10);message("Декодирую аудио. Длинные записи могут потребовать много оперативной памяти.");const ctx=new (window.AudioContext||window.webkitAudioContext)();let audio;try{const bytes=await state.file.arrayBuffer();audio=await ctx.decodeAudioData(bytes);}finally{await ctx.close();}const duration=audio.duration;
+
+let macBridgeReady=false;
+async function detectMacBridge(){
+ const hostname=location.hostname;
+ if(!(hostname==="localhost"||hostname==="127.0.0.1"||hostname.endsWith(".local")||/^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(hostname)))return;
+ try{
+  const response=await fetch("/api/health",{cache:"no-store"});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(!data.ok||data.engine!=="mlx-whisper")return;
+  const select=el("model");
+  if(!select.querySelector('option[value="mac-turbo"]')){
+    const option=document.createElement("option");
+    option.value="mac-turbo";option.textContent="Mac · Whisper Large-v3 Turbo";
+    select.prepend(option);
+  }
+  macBridgeReady=true;
+  select.value="mac-turbo";
+  message("Mac-движок подключён. Распознавание выполняется локально на Mac через MLX.");
+  status("Mac-движок готов",0);
+ }catch(error){console.debug("Mac bridge not available",error);}
+}
+async function runMacTranscription(){
+ if(!macBridgeReady){message("Mac-движок не подключён. Открой личный URL, показанный в Terminal на Mac.",true);return;}
+ const token=new URLSearchParams(location.search).get("token");
+ if(!token){message("Нет ключа доступа к Mac. Открой ссылку с token из Terminal.",true);return;}
+ const language=el("language").value,target=el("target").value;
+ if(target!=="none"&&language!=="en"){message("Для перевода выбери исходный язык «Английский».",true);return;}
+ state.macRunning=true;toggleRunning(true);state.stop=false;
+ status("Передача записи на Mac",1);
+ message("Mac принимает аудио и затем распознаёт его моделью Large-v3 Turbo. Не закрывай страницу.");
+ const query=new URLSearchParams({token,language,ext:state.file.name.split(".").pop().toLowerCase()});
+ let poller=null;
+ try{
+  let querying=false;
+  poller=setInterval(async()=>{
+    if(querying)return;
+    querying=true;
+    try{
+      const r=await fetch("/api/status?token="+encodeURIComponent(token),{cache:"no-store"});
+      if(r.ok){const d=await r.json();status(d.stage||"Mac распознаёт",d.percent||0);message(d.detail||"Обработка на Mac продолжается.");}
+    }catch(error){console.debug("Status temporarily unavailable",error);}
+    finally{querying=false;}
+  },1700);
+  const response=await fetch("/api/transcribe?"+query.toString(),{
+   method:"POST",body:state.file,headers:{"Content-Type":"application/octet-stream"}
+  });
+  const payload=await response.json();
+  if(!response.ok)throw new Error(payload.error||"Ошибка Mac-движка");
+  if(!Array.isArray(payload.chunks)||!payload.chunks.length)throw new Error("Mac не вернул текст");
+  // The previous transcript remains intact until the new complete result arrives.
+  state.chunks=payload.chunks.map(c=>({
+   start:Number(c.start)||0,end:Number(c.end)||0,text:String(c.text||""),
+   raw:String(c.raw??c.text??""),warning:!!c.warning,translation:""
+  }));
+  state.name=state.file.name;state.source=language;state.view="text";
+  state.transcribed=true;state.translated=false;save();render();
+  status("Распознавание завершено",100);
+  message("Mac обработал запись длительностью "+time(payload.duration)+". Проверь текст и сохрани.");
+  if(target!=="none")await doTranslation();
+  if(window.innerWidth<761)el("result").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(error){
+  status("Ошибка Mac-движка",0);
+  message("Не удалось выполнить распознавание: "+(error?.message||error)+". Ранее сохранённый текст не удалён.",true);
+ }finally{
+  if(poller!==null)clearInterval(poller);
+  state.macRunning=false;toggleRunning(false);
+ }
+}
+detectMacBridge();
+el("start").addEventListener("click",async()=>{if(!state.file||state.running)return;if(el("model").value==="mac-turbo"){await runMacTranscription();return;}const target=el("target").value,lang=el("language").value;if(target!=="none"&&lang!=="en"){message("Чтобы перевести на русский или украинский, выбери язык записи «Английский».",true);return;}toggleRunning(true);state.stop=false;status("Проверка аудио",0);message("Сравниваю длительность записи и доступного для распознавания звука…");try{status("Чтение аудиофайла",10);message("Декодирую аудио. Длинные записи могут потребовать много оперативной памяти.");const ctx=new (window.AudioContext||window.webkitAudioContext)();let audio;try{const bytes=await state.file.arrayBuffer();audio=await ctx.decodeAudioData(bytes);}finally{await ctx.close();}const duration=audio.duration;
 const displayed=await playerDuration();
 if(displayed && Math.abs(displayed-duration)>Math.max(3,displayed*.015)){el("repair").hidden=false;
  const missing=Math.max(0,displayed-duration);
