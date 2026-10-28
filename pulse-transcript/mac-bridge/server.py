@@ -119,80 +119,158 @@ class PulseHandler(SimpleHTTPRequestHandler):
             JOB_LOCK.release()
 
     def correct_text(self, params):
-        """Create a second, clearly marked text version; never overwrite originals."""
+        """Return a separately editable copy; never replace the original text."""
         if not self.authorised(params):
             return self.json_reply(403, {"error": "Неверный ключ Mac"})
         if not JOB_LOCK.acquire(blocking=False):
             return self.json_reply(409, {"error": "Mac обрабатывает другую задачу"})
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 300_000:
-                raise ValueError("Слишком большой текст")
+            if length <= 0 or length > 350_000:
+                raise ValueError("Текст пуст или слишком большой")
             incoming = json.loads(self.rfile.read(length).decode("utf-8"))
             items = incoming.get("texts", [])
             language = incoming.get("language", "uk")
+            provider = incoming.get("provider", "bionic")
+            mode = incoming.get("mode", "literary")
             if language not in ("uk", "ru", "en"):
-                raise ValueError("Неизвестный язык текста")
+                raise ValueError("Неверный язык")
+            if provider not in ("bionic", "ollama"):
+                raise ValueError("Неверный редактор")
+            if mode not in ("faithful", "literary"):
+                raise ValueError("Неверный режим")
             if not isinstance(items, list) or not (1 <= len(items) <= 300):
-                raise ValueError("Нужен массив из 1–300 фрагментов")
-            if any(not isinstance(x, str) or len(x) > 1500 for x in items):
-                raise ValueError("Некорректная длина фрагмента")
-            set_status("Коррекция", 1, "Ollama исправляет копию текста")
+                raise ValueError("Ожидается 1–300 текстовых фрагментов")
+            if any(not isinstance(x, str) or len(x) > 1800 for x in items):
+                raise ValueError("Обнаружен слишком длинный фрагмент")
+
+            if provider == "bionic":
+                # Bionic uses LM Studio's server; its exact model ID is resolved
+                # from /v1/models, never assumed from a display name.
+                try:
+                    req = urllib.request.Request("http://127.0.0.1:1234/v1/models")
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        available = json.load(response).get("data", [])
+                except (urllib.error.URLError, TimeoutError) as error:
+                    raise RuntimeError(
+                        "Bionic/LM Studio API не отвечает. В LM Studio открой "
+                        "Developer → Start server (порт 1234) и загрузи Qwen 3.5 9B."
+                    ) from error
+                candidates = [str(x.get("id", "")) for x in available]
+                configured = os.environ.get("PULSE_BIONIC_MODEL", "").strip()
+                if configured and configured not in candidates:
+                    raise RuntimeError("PULSE_BIONIC_MODEL не найден среди моделей LM Studio: "
+                                       + ", ".join(candidates[:6]))
+                chosen = configured or next(
+                    (name for name in candidates if "qwen" in name.lower() and
+                     ("9b" in name.lower() or "3.5" in name.lower())), None)
+                if not chosen:
+                    raise RuntimeError(
+                        "LM Studio подключён, но не найдена Qwen 3.5 9B. "
+                        "Загрузи её в LM Studio или укажи PULSE_BIONIC_MODEL."
+                    )
+            else:
+                chosen = os.environ.get("PULSE_OLLAMA_MODEL", "qwen3:4b")
+
+            set_status("Литературная редакция" if mode == "literary" else "Исправление",
+                       1, f"Редактор: {provider}, модель: {chosen}")
             fixed = []
-            for i in range(0, len(items), 4):
-                batch = items[i:i + 4]
-                if not any(x.strip() for x in batch):
+            for index in range(0, len(items), 4):
+                batch = items[index:index + 4]
+                if not any(t.strip() for t in batch):
                     fixed.extend(batch)
                     continue
-                label = {"uk": "українською", "ru": "на русском", "en": "in English"}[language]
-                prompt = (
-                    "Ти — обережний редактор транскрипцій. "
-                    "Виправляй ТІЛЬКИ очевидні помилки розпізнавання, "
-                    "орфографію, пунктуацію й граматичні помилки. "
-                    "НЕ перекладай, НЕ переказуй, НЕ додавай і НЕ викидай зміст. "
-                    "Не вгадуй біблійні цитати замість почутих слів. "
-                    "Сумнівні слова залиш без змін. "
-                    "Контекст: біблійна промова, Єгова, Ісус Христос, Прислів’я, "
-                    "Об’явлення, районний конгрес. "
-                    f"Мова тексту: {label}. "
-                    "Поверни ЛИШЕ JSON об'єкт з полем items — масивом "
-                    f"із {len(batch)} виправлених рядків у тому ж порядку. "
-                    "Вхідні фрагменти: " + json.dumps(batch, ensure_ascii=False)
+                lang_label = {"uk": "українська", "ru": "русский", "en": "English"}[language]
+                instruction = (
+                    "Ти — професійний редактор розпізнаних промов. "
+                    "Тексти пов'язані з вірою та біблійним навчанням Свідків Єгови. "
+                    "Використовуй природний літературний стиль публікацій Свідків Єгови. "
+                    "Терміни: Єгова, Ісус Христос, Святе Письмо, Прислів'я, Псалми, "
+                    "Об'явлення, районний конгрес, старійшина, ранкове поклоніння, "
+                    "промова, біблійний вірш, Товариство «Вартова башта». "
+                    "Це лише термінологічні орієнтири, НЕ вигадуй нових фактів. "
+                    "Не змінюй зміст, богословські твердження, імена, числа або "
+                    "посилання на вірші. НЕ дописуй пропущені речення та не вигадуй "
+                    "точні біблійні цитати без джерела. Якщо фраза незрозуміла, "
+                    "залиш її близькою до оригіналу, а не домислюй. "
+                    "Не перекладай текст на іншу мову. "
                 )
-                request_data = json.dumps({
-                    "model": "qwen3:4b", "prompt": prompt, "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0, "num_predict": 1500},
-                }, ensure_ascii=False).encode("utf-8")
+                if mode == "literary":
+                    instruction += (
+                        "Режим: літературна редакція. Виправ пунктуацію, морфологію, "
+                        "невдалі усні повтори, зберігаючи ВСІ ключові думки. "
+                    )
+                else:
+                    instruction += (
+                        "Режим: мінімальне виправлення. Виправ тільки очевидні "
+                        "помилки ASR, правопис і пунктуацію, не прибирай повторів. "
+                    )
+                instruction += (
+                    f"Мова: {lang_label}. Отримуєш масив із {len(batch)} фрагментів. "
+                    "Поверни тільки об'єкт JSON з ключем items і точно такою ж "
+                    "кількістю рядків у незмінному порядку. "
+                    "Не об'єднуй і не пропускай фрагменти."
+                )
+                user_text = json.dumps({"items": batch}, ensure_ascii=False)
+                if provider == "bionic":
+                    payload = {
+                        "model": chosen,
+                        "messages": [
+                            {"role": "system", "content": instruction},
+                            {"role": "user", "content": user_text},
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 2200,
+                        "stream": False,
+                        "response_format": {"type": "json_object"},
+                    }
+                    address = "http://127.0.0.1:1234/v1/chat/completions"
+                else:
+                    payload = {
+                        "model": chosen,
+                        "prompt": instruction + "\n" + user_text,
+                        "stream": False, "format": "json",
+                        "options": {"temperature": 0, "num_predict": 2200},
+                    }
+                    address = "http://127.0.0.1:11434/api/generate"
                 request = urllib.request.Request(
-                    "http://127.0.0.1:11434/api/generate",
-                    data=request_data,
-                    headers={"Content-Type": "application/json"}, method="POST",
+                    address, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}, method="POST"
                 )
                 try:
                     with urllib.request.urlopen(request, timeout=300) as response:
                         output = json.load(response)
+                except urllib.error.HTTPError as error:
+                    details = error.read(1000).decode("utf-8", errors="replace")
+                    raise RuntimeError(f"{provider}: HTTP {error.code}: {details}") from error
                 except (urllib.error.URLError, TimeoutError) as error:
                     raise RuntimeError(
-                        "Ollama недоступна. Установи Ollama и выполни: "
-                        "ollama pull qwen3:4b. " + str(error)
+                        f"Нет ответа от {provider}. Проверь, что модель загружена, "
+                        "API запущен и хватает оперативной памяти: " + str(error)
                     ) from error
                 try:
-                    decoded = json.loads(output["response"])
-                    proposals = decoded["items"]
-                    if not isinstance(proposals, list) or len(proposals) != len(batch):
-                        raise ValueError("wrong number of items")
-                    if any(not isinstance(x, str) or len(x) > 2500 for x in proposals):
-                        raise ValueError("invalid text returned")
-                except (KeyError, ValueError, TypeError) as error:
-                    raise RuntimeError("Ollama вернула некорректный формат текста") from error
-                fixed.extend(proposals)
-                set_status("Коррекция текста", int(100 * len(fixed) / len(items)),
-                           f"Исправлено {len(fixed)} из {len(items)} фрагментов")
-            set_status("Исправленная копия готова", 100, running=False)
-            return self.json_reply(200, {"corrected": fixed})
+                    message = (output["choices"][0]["message"]["content"] if provider == "bionic"
+                               else output["response"])
+                    parsed = json.loads(message)
+                    suggestions = parsed["items"]
+                    if not isinstance(suggestions, list) or len(suggestions) != len(batch):
+                        raise ValueError("Неверное число фрагментов")
+                    if any(not isinstance(v, str) or len(v) > 2600 for v in suggestions):
+                        raise ValueError("Некорректные строки")
+                except (KeyError, IndexError, ValueError, TypeError) as error:
+                    raise RuntimeError(
+                        f"{provider} вернул неполный или некорректный JSON. "
+                        "Исходная транскрипция не изменена."
+                    ) from error
+                fixed.extend(suggestions)
+                set_status("Редакция текста", int(100 * len(fixed) / len(items)),
+                           f"Обработано {len(fixed)} из {len(items)} фрагментов")
+            set_status("Исправленная копия готова", 100,
+                       f"Редактор: {provider}, модель: {chosen}", running=False)
+            return self.json_reply(200, {"corrected": fixed, "provider": provider,
+                                         "mode": mode, "model": chosen})
         except Exception as error:
-            set_status("Ошибка коррекции", 0, str(error), running=False)
+            set_status("Ошибка редакции", 0, str(error), running=False)
             return self.json_reply(500, {"error": str(error)})
         finally:
             JOB_LOCK.release()
